@@ -1,6 +1,6 @@
 {
   "name": "@iep/web",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "LEP (Lawyer's Enablement Platform) Web Dashboard",
   "type": "module",
   "scripts": {

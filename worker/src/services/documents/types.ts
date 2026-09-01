@@ -60,6 +60,8 @@ export interface DocContext {
   subjects: Array<{ role: string; displayName: string | null; speakerLabel: string | null }>
   /** 진술 분석 요지 (S4) — 수사보고가 쓴다. */
   analysis: { summary: string | null; keyPoints: string[]; actionItems: string[] } | null
+  /** 이미지 증적·참조 자료 (S7). 이유·해시·사실 설명. */
+  images: Array<{ reason: string; sha256: string; summary: string | null; capturedAt: string | null }>
   /** 화면에서 받은 값. 소가·법원처럼 사건에 아직 없는 것 */
   params: Record<string, unknown>
 }

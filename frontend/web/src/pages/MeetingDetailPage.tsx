@@ -25,6 +25,7 @@ import { apiClient } from '../services/api';
 import TranscriptLine, { type Highlight } from '../components/TranscriptLine';
 import TranscriptDownload from '../components/TranscriptDownload';
 import DocumentBuilder from '../components/DocumentBuilder';
+import EvidenceImages from '../components/EvidenceImages';
 import AudioPlayer, { type AudioPlayerHandle, type Recording } from '../components/AudioPlayer';
 import type { Meeting, AnalysisResult } from '../types';
 
@@ -530,6 +531,7 @@ export default function MeetingDetailPage() {
               </Typography>
             )}
           </Paper>
+          <EvidenceImages meetingId={meeting.id} />
         </Stack>
       )}
 

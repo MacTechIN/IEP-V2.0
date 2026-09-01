@@ -64,8 +64,9 @@ export async function gather(
   let transcript: DocContext['transcript'] = []
   let subjects: DocContext['subjects'] = []
   let analysis: DocContext['analysis'] = null
+  let images: DocContext['images'] = []
   if (opts.meetingId) {
-    const [mm, ts, sp, ar] = await Promise.all([
+    const [mm, ts, sp, ar, im] = await Promise.all([
       db.query(`select id, title, kind, start_time, created_at, notes
                   from v2.meetings where id = $1`, [opts.meetingId]),
       db.query(`select speaker_label, content from v2.transcript_segments
@@ -74,6 +75,8 @@ export async function gather(
                  where meeting_id = $1 order by created_at`, [opts.meetingId]),
       db.query(`select summary, key_points, action_items from v2.analysis_results
                  where meeting_id = $1`, [opts.meetingId]),
+      db.query(`select reason, sha256, description, captured_at from v2.meeting_images
+                 where meeting_id = $1 order by created_at`, [opts.meetingId]),
     ])
     const mr = mm.rows[0]
     if (mr) {
@@ -101,6 +104,14 @@ export async function gather(
         actionItems: Array.isArray(arr.action_items) ? arr.action_items.map(String) : [],
       }
     }
+    images = im.rows.map((r: Record<string, unknown>) => {
+      const d = r.description as { summary?: string } | null
+      return {
+        reason: String(r.reason ?? ''), sha256: String(r.sha256 ?? ''),
+        summary: d?.summary ?? null,
+        capturedAt: r.captured_at ? String(r.captured_at).slice(0, 10) : null,
+      }
+    })
   }
 
   return {
@@ -130,7 +141,7 @@ export async function gather(
       name: a.name, barNo: a.bar_no, firmName: a.firm_name,
       position: a.position, officePhone: a.office_phone, officeAddress: a.office_address,
     } : null,
-    meeting, transcript, subjects, analysis,
+    meeting, transcript, subjects, analysis, images,
     params: opts.params ?? {},
   }
 }

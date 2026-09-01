@@ -17,6 +17,7 @@ import resourceRoutes from './routes/resources'
 import meetingRoutes from './routes/meetings'
 import matterRoutes from './routes/matters'
 import documentRoutes from './routes/documents'
+import imageRoutes from './routes/images'
 import { AnalysisWorkflow } from './workflows/analysis'
 import { TranscribeWorkflow } from './workflows/transcribe'
 
@@ -78,6 +79,8 @@ app.use('/api/v2/elements/*', requireAuth)
 // 서면 (029). **사건과 같은 규칙** — 담당자만. 게이트를 빠뜨리면 c.get('user') 가 비어 터진다.
 app.use('/api/v2/documents', requireAuth)
 app.use('/api/v2/documents/*', requireAuth)
+app.use('/api/v2/images', requireAuth)
+app.use('/api/v2/images/*', requireAuth)
 app.use('/api/v2/recordings', requireAuth)
 // 오디오 재생만 예외다 (012). `<audio src>` 는 헤더를 붙일 수 없어 티켓을 쿼리로 받는다.
 // **여기서 통과시켜도 라우트가 티켓을 검증한다** — 티켓이 없으면 그쪽에서 401 을 준다.
@@ -89,6 +92,7 @@ app.use('/api/v2/recordings/*', async (c, next) => {
 app.route('/api/v2', meetingRoutes)
 app.route('/api/v2', matterRoutes)
 app.route('/api/v2', documentRoutes)
+app.route('/api/v2', imageRoutes)
 
 /** 토큰이 통하는지 확인용. 인증만 통과하면 자기 자신을 돌려준다. */
 app.get('/api/v2/me', requireAuth, (c) => c.json({ success: true, data: c.get('user') }))

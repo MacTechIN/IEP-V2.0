@@ -254,6 +254,18 @@ export const investigationReport = templateForm({
       L.push('')
     }
 
+    // 6. 증적·참조 자료 (S7) — 이유 + 사실 설명 + 무결성 해시. 판정 아님.
+    if (ctx.images.length) {
+      L.push('6. 증적·참조 자료')
+      ctx.images.forEach((img, i) => {
+        L.push(`   ${i + 1}) [이유] ${img.reason}`)
+        if (img.summary) L.push(`        · 설명: ${img.summary}`)
+        L.push(`        · 무결성: sha256 ${img.sha256.slice(0, 12)}…`
+          + (img.capturedAt ? ` (입력 ${img.capturedAt})` : ''))
+      })
+      L.push('   ※ 이미지는 참조 자료입니다. 판단은 수사관이 합니다.', '')
+    }
+
     L.push('작성자', ...authorBlock(ctx).map((x) => `   ${x}`), '')
     L.push('─'.repeat(52), REVIEW_LINE)
     return { title: `${ctx.meeting?.title ?? '조사'} — 수사보고`,

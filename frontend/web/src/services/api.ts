@@ -491,6 +491,36 @@ class APIClient {
   async adminSetUserActive(id: string, isActive: boolean): Promise<ApiResponse> {
     return this.client.patch(`/admin/users/${id}`, { isActive });
   }
+
+  // ── 이미지 증적·참조 자료 (S7) ──
+  /** 조사에 이미지 붙이기. **입력 이유 필수.** */
+  async attachImage(meetingId: string, file: File, reason: string,
+                    linkedFindingId?: string | null): Promise<ApiResponse> {
+    const form = new FormData();
+    form.append('image', file);
+    form.append('reason', reason);
+    if (linkedFindingId) form.append('linkedFindingId', linkedFindingId);
+    return this.client.post(`/meetings/${meetingId}/images`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }, timeout: UPLOAD_TIMEOUT_MS,
+    });
+  }
+  async listImages(meetingId: string): Promise<ApiResponse> {
+    return this.client.get(`/meetings/${meetingId}/images`);
+  }
+  /** 원본 이미지를 인증 fetch 로 받아 화면에 쓸 object URL 로. (img src 는 헤더를 못 붙인다) */
+  async imageObjectUrl(id: string): Promise<string | null> {
+    try {
+      const blob = await this.client.get(`/images/${id}/raw`, { responseType: 'blob' }) as unknown as Blob;
+      return URL.createObjectURL(blob);
+    } catch { return null; }
+  }
+  /** Vision 사실 분석 (판정 아님). */
+  async analyzeImage(id: string): Promise<ApiResponse> {
+    return this.client.post(`/images/${id}/analyze`, {});
+  }
+  async deleteImage(id: string): Promise<ApiResponse> {
+    return this.client.delete(`/images/${id}`);
+  }
 }
 
 // 싱글톤 인스턴스
