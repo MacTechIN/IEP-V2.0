@@ -42,7 +42,7 @@ function fmtWhen(v: string): string {
  * 2026-08-26 에 일곱 줄이 전부 같은 글자로 보였다 — 실제로는 소가도 법원도 달랐다.
  */
 function summarize(p: any): string {
-  if (!p || typeof p !== 'object') return '소장';
+  if (!p || typeof p !== 'object') return '문서';
   const bits: string[] = [];
   const amt = Number(p.claimAmount);
   if (amt > 0) {
@@ -53,7 +53,7 @@ function summarize(p: any): string {
   if (p.court) bits.push(String(p.court));
   if (p.adverseHandling) bits.push(String(p.adverseHandling));
   if (p.scale) bits.push(String(p.scale));
-  return bits.length ? bits.join(' · ') : '소장';
+  return bits.length ? bits.join(' · ') : '문서';
 }
 
 export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
@@ -247,9 +247,9 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
       <Paper sx={{ p: 3, mt: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>📄 서면 만들기</Typography>
         <Typography variant="body2" color="text.secondary" mb={2}>
-          이 상담이 <b>사건에 붙어 있지 않습니다.</b> 서면은 사건 자료(시계열·증거·요건사실)로
-          만들기 때문에 먼저 사건에 연결해야 합니다.
-          연결하면 <b>이미 끝난 분석 결과로 사건 자료를 채웁니다</b> — 다시 분석하지 않습니다.
+          이 조사가 <b>수사사건에 붙어 있지 않습니다.</b> 조서·수사보고는 수사사건에 연결된
+          조사 자료로 만들기 때문에 먼저 수사사건에 연결해야 합니다.
+          연결하면 <b>이미 끝난 분석 결과를 그대로 씁니다</b> — 다시 분석하지 않습니다.
         </Typography>
 
         {attachMsg && (
@@ -316,8 +316,8 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
     <Paper sx={{ p: 3, mt: 3 }}>
       <Typography variant="h6" sx={{ fontWeight: 600 }}>📄 서면 만들기</Typography>
       <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-        이 사건의 요건사실·시계열·증거로 초안을 만듭니다.
-        <b> 초안입니다 — 제출 전에 반드시 검토하십시오.</b>
+        조사 전사와 진술 분석으로 조서·수사보고 초안을 만듭니다.
+        <b> 초안입니다 — 제출 전에 반드시 검토·정리하십시오.</b>
       </Typography>
 
       {/* **어느 사건에 붙어 있는지 보여 준다.** 잘못 붙였으면 여기서 뗀다 (030) */}
@@ -459,13 +459,12 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
                     )
                   ))}
 
-                  <Box>
+                  {f.params.length > 0 && (<Box>
                     <Button size="small" onClick={() => brief === null ? showBrief(f.kind) : setBrief(null)}>
                       {brief === null ? '보낼 자료 보기' : '자료 접기'}
                     </Button>
                     <Typography variant="caption" color="text.secondary" display="block">
-                      무엇을 근거로 쓰는지 먼저 보십시오. 틀렸거나 빠진 것은 위
-                      <b> 「변호사가 보태는 것」</b>에 적으면 <b>자료보다 우선합니다.</b>
+                      무엇을 근거로 쓰는지 먼저 보십시오.
                     </Typography>
                     <Collapse in={brief !== null}>
                       <Box sx={{ mt: 1, p: 1.5, bgcolor: 'grey.50', borderRadius: 1,
@@ -475,7 +474,7 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
                         </Typography>
                       </Box>
                     </Collapse>
-                  </Box>
+                  </Box>)}
 
                   {/* **여기서 채우면 되는 것**은 버튼을 막지 않는다 — 안내로만 둔다 (030) */}
                   {/* **채운 것은 지운다.** 이 목록은 화면이 열릴 때 한 번 받아 온 것이라,

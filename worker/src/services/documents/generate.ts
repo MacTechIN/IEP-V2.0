@@ -46,10 +46,10 @@ export async function gather(
                 from v2.evidence where matter_id = $1 order by status, kind`, [matterId]),
     // 상담을 지정했으면 그 상담 것만. 아니면 사건 전체.
     opts.meetingId
-      ? db.query(`select kind, severity, detail, question from v2.findings
-                   where meeting_id = $1 order by severity desc`, [opts.meetingId])
-      : db.query(`select kind, severity, detail, question from v2.findings
-                   where matter_id = $1 order by severity desc limit 20`, [matterId]),
+      ? db.query(`select kind, severity, detail, question, refs from v2.findings
+                   where meeting_id = $1 order by created_at`, [opts.meetingId])
+      : db.query(`select kind, severity, detail, question, refs from v2.findings
+                   where matter_id = $1 order by created_at limit 40`, [matterId]),
     opts.meetingId
       ? db.query('select result from v2.legal_analyses where meeting_id = $1', [opts.meetingId])
       : Promise.resolve({ rows: [] as Array<{ result: unknown }> }),
@@ -58,6 +58,49 @@ export async function gather(
   ])
 
   const a = au.rows[0]
+
+  // ── 조사(meeting) 자료 — 수사 서식(조서·수사보고)이 쓴다. meetingId 없으면 전부 빈다.
+  let meeting: DocContext['meeting'] = null
+  let transcript: DocContext['transcript'] = []
+  let subjects: DocContext['subjects'] = []
+  let analysis: DocContext['analysis'] = null
+  if (opts.meetingId) {
+    const [mm, ts, sp, ar] = await Promise.all([
+      db.query(`select id, title, kind, start_time, created_at, notes
+                  from v2.meetings where id = $1`, [opts.meetingId]),
+      db.query(`select speaker_label, content from v2.transcript_segments
+                 where meeting_id = $1 order by sort_order`, [opts.meetingId]),
+      db.query(`select role, display_name, speaker_label from v2.subject_parties
+                 where meeting_id = $1 order by created_at`, [opts.meetingId]),
+      db.query(`select summary, key_points, action_items from v2.analysis_results
+                 where meeting_id = $1`, [opts.meetingId]),
+    ])
+    const mr = mm.rows[0]
+    if (mr) {
+      meeting = {
+        id: mr.id, title: mr.title, kind: mr.kind,
+        occurredAt: (mr.start_time ?? mr.created_at)
+          ? String(mr.start_time ?? mr.created_at).slice(0, 10) : null,
+        notes: mr.notes ?? null,
+      }
+    }
+    transcript = ts.rows.map((t: Record<string, unknown>) => ({
+      speakerLabel: String(t.speaker_label ?? ''), content: String(t.content ?? ''),
+    }))
+    subjects = sp.rows.map((r: Record<string, unknown>) => ({
+      role: String(r.role), displayName: (r.display_name as string) ?? null,
+      speakerLabel: (r.speaker_label as string) ?? null,
+    }))
+    const arr = ar.rows[0]
+    if (arr) {
+      analysis = {
+        summary: arr.summary ?? null,
+        keyPoints: Array.isArray(arr.key_points) ? arr.key_points.map(String) : [],
+        actionItems: Array.isArray(arr.action_items) ? arr.action_items.map(String) : [],
+      }
+    }
+  }
+
   return {
     matter: {
       id: m.id, title: m.title, cause: m.cause, matterType: m.matter_type,
@@ -75,12 +118,17 @@ export async function gather(
       legalMeaning: t.legal_meaning as string | null,
     })),
     evidence: ev.rows,
-    findings: fi.rows,
+    findings: fi.rows.map((f: Record<string, unknown>) => ({
+      kind: String(f.kind), severity: String(f.severity ?? 'MEDIUM'),
+      detail: String(f.detail ?? ''), question: (f.question as string) ?? null,
+      refs: Array.isArray(f.refs) ? (f.refs as unknown[]).map(String) : [],
+    })),
     legal: (la.rows[0]?.result as Record<string, unknown>) ?? null,
     author: a ? {
       name: a.name, barNo: a.bar_no, firmName: a.firm_name,
       position: a.position, officePhone: a.office_phone, officeAddress: a.office_address,
     } : null,
+    meeting, transcript, subjects, analysis,
     params: opts.params ?? {},
   }
 }
@@ -104,6 +152,12 @@ export async function generateDocument(
   const missing = form.missing(ctx)
   // **문구만 넘기면 화면이 고칠 칸을 못 띄운다.** 통째로 넘긴다.
   if (missing.length) return { ok: false, missing }
+
+  // **조립형 서식(조서·수사보고)은 모델을 부르지 않는다.** 있는 그대로 짜맞춘다 (§0).
+  if (form.assemble) {
+    const a = form.assemble(ctx)
+    return { ok: true, kind: form.kind, title: a.title, result: a.result, body: a.body, model: 'template' }
+  }
 
   const model = env.OPENAI_LEGAL_MODEL || 'gpt-4o'
   // **밖으로 나가기 전에 가린다** (021). 서면도 상담과 같은 취급이다.

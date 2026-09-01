@@ -68,7 +68,7 @@ export default function MeetingDetailPage() {
   const [transcriptQuery, setTranscriptQuery] = useState('');
   // 조사노트가 첫 탭이다 — 나중에 조사을 되짚을 때 가장 먼저 보는 것이 정리된 노트이고,
   // 녹취는 그 근거를 확인할 때 옆에서 본다. 그래서 둘을 한 탭에 나란히 둔다.
-  const [tab, setTab] = useState<'note' | 'report' | 'metrics' | 'legal'>('note');
+  const [tab, setTab] = useState<'note' | 'report' | 'metrics' | 'legal' | 'statement'>('note');
   /**
    * 법률 분해 (018). **`kind === 'legal'` 일 때만 부른다** —
    * 일반 조사에서 빈 탭을 띄우면 "왜 비어 있지" 를 매번 묻게 된다.
@@ -128,8 +128,8 @@ export default function MeetingDetailPage() {
             apiClient.getAnalysis(id).catch(() => null),
             apiClient.getTranscript(id).catch(() => null),
             apiClient.getMeetingRecordings(id).catch(() => null),
-            // 법률 상담일 때만 부른다 — 일반 조사에는 담긴 것이 없다.
-            Promise.resolve(null),   // IEP: 법률 분해 없음 (S4 에서 진술 분석으로 교체)
+            // 진술 분석(S4) findings 를 부른다 — /legal/meeting 이 v2.findings 를 그대로 준다.
+            apiClient.getLegalAnalysis(id).catch(() => null),
           ]);
           if (legalResponse?.success) setLegal(legalResponse.data);
           if (!alive) return;
@@ -471,16 +471,67 @@ export default function MeetingDetailPage() {
         sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
       >
         <Tab label={`조사노트 (${segments.length})`} value="note" />
-        {/* **법률 상담일 때만 보인다.** 일반 조사에 빈 탭을 띄우지 않는다 (016) */}
-        {legalKind && (
-          <Tab label={`사실관계${legal?.findings?.length ? ` · 확인 ${legal.findings.length}` : ''}`} value="legal" />
-        )}
+        {/* 진술 분석(S4) — 모순·미확인·태도변화. 조사 문서라 항상 보인다. */}
+        <Tab label={`진술 분석${legal?.findings?.length ? ` · ${legal.findings.length}` : ''}`} value="statement" />
         <Tab label="리포트" value="report" />
         {/* **법률 상담에는 지표 탭을 띄우지 않는다.**
             딜 강도·조사 점수·스코어카드는 전부 영업 척도다. 법률 상담에 붙이면
             수사관이 자기 조사를 「딜」로 채점당한다 — 이 제품이 하려는 일이 아니다. */}
         {!legalKind && <Tab label="지표" value="metrics" />}
       </Tabs>
+
+      {/* ── 진술 분석 탭 (IEP · S4) — §0: 판정이 아니라 근거를 짚는다 ── */}
+      {tab === 'statement' && (
+        <Stack spacing={3}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="subtitle2" fontWeight={700} mb={0.5}>진술 분석</Typography>
+            <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
+              모순 · 미확인 주장 · 태도 변화 · 미응답을 <b>원문 인용과 함께</b> 짚습니다.
+              <b> 판정이 아니라 확인해 볼 지점</b>입니다 — 판단은 수사관이 합니다.
+            </Typography>
+            {legal?.findings?.length ? (
+              <Stack spacing={1.5}>
+                {legal.findings.map((f: any) => {
+                  const ui: Record<string, { label: string; bg: string; bd: string; c: string }> = {
+                    CONTRADICTION:  { label: '진술 간 모순',   bg: '#FEF2F2', bd: '#FCA5A5', c: '#991B1B' },
+                    UNANSWERED:     { label: '미응답',        bg: '#FFFBEB', bd: '#FCD34D', c: '#92400E' },
+                    UNVERIFIED:     { label: '확인 필요',      bg: '#EFF6FF', bd: '#93C5FD', c: '#1E40AF' },
+                    ATTITUDE_SHIFT: { label: '태도 변화',      bg: '#F1F5F9', bd: '#CBD5E1', c: '#334155' },
+                  };
+                  const u = ui[f.kind] || { label: f.kind, bg: '#F1F5F9', bd: '#CBD5E1', c: '#334155' };
+                  const refs: string[] = Array.isArray(f.refs) ? f.refs : [];
+                  return (
+                    <Box key={f.id} sx={{ bgcolor: u.bg, border: `1px solid ${u.bd}`, borderRadius: 1, p: 1.5 }}>
+                      <Chip size="small" label={u.label} sx={{ bgcolor: u.c, color: '#fff', height: 20, mb: 0.75 }} />
+                      <Typography variant="body2">{f.detail}</Typography>
+                      {/* 근거 인용 — 전사에서 그대로 대조된 문장 (§0). */}
+                      {refs.length > 0 && (
+                        <Box sx={{ mt: 1, pl: 1.5, borderLeft: `3px solid ${u.bd}` }}>
+                          {refs.map((q, i) => (
+                            <Typography key={i} variant="body2"
+                              sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                              &ldquo;{q}&rdquo;
+                            </Typography>
+                          ))}
+                        </Box>
+                      )}
+                      {f.question && (
+                        <Typography variant="body2" sx={{ mt: 0.75, color: u.c, fontWeight: 600 }}>
+                          다음에 물을 것 — {f.question}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                이 조사에서는 확인할 것이 나오지 않았습니다. (근거 인용이 없는 지적은 버립니다)
+              </Typography>
+            )}
+          </Paper>
+        </Stack>
+      )}
 
       {/* ── 사실관계 탭 (법률 상담 전용, 018) ──
           **순서가 중요하다.** 확인할 것 → 요건 → 시계열 → 증거.

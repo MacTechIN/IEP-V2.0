@@ -6,7 +6,7 @@ import {
 import { apiClient } from '../services/api';
 
 /**
- * 내 프로필 — 변호사 신원(026)과 목소리 등록.
+ * 내 프로필 — 수사관 신원과 목소리 등록. 신원은 조서·수사보고의 작성자 표시에 쓴다.
  *
  * **본인 목소리만 등록한다.** v1 은 조사마다 참석자 전원을 등록하다가 두 가지로 실패했다.
  * 대상자 성문(생체인식 정보)을 보관하게 되는 것이 하나, 그리고 전원 등록이 아니면
@@ -15,14 +15,13 @@ import { apiClient } from '../services/api';
  */
 
 /**
- * 직위. **사무장이 들어 있다** — 사무장 업무를 얹는 것이 이 제품의 전제다
- * (`CLAUDE.md`). 사무장에게는 변호사 등록번호가 없으므로 그 칸을 비워 둘 수 있다.
+ * 계급/직위 — 조서·수사보고의 작성자 표시에 쓴다. 비워 둘 수 있다.
  */
-const POSITIONS = ['대표변호사', '파트너변호사', '구성원변호사', '소속변호사', '사무장', '직원'];
+// 계급/직위 — 조서·수사보고의 작성자 표시에 쓴다.
+const POSITIONS = ['순경', '경장', '경사', '경위', '경감', '경정', '수사관'];
 
-/** 사건을 만들 때 청구원인 추천에 쓸 자리 (026). 지금은 프로필에만 담는다. */
-const PRACTICE_AREAS = ['민사', '형사', '가사', '행정', '기업·M&A', '노동',
-                        '지식재산', '조세', '건설·부동산', '금융', '의료', '기타'];
+/** 담당 분야 — 통계·분류에 쓸 자리. 지금은 프로필에만 담는다. */
+const PRACTICE_AREAS = ['경제', '지능', '사이버', '강력', '여성·청소년', '교통', '마약', '기타'];
 
 const MIN_MS = 2000;
 const MAX_MS = 10000;
@@ -32,8 +31,8 @@ const TARGET_MS = 8000;
 export default function ProfilePage() {
   const [enrolled, setEnrolled] = useState<{ durationMs: number; enrolledAt: string } | null>(null);
   const [me, setMe] = useState<any | null>(null);
-  // 변호사 신원 (026). **저장을 누를 때까지 서버에 안 보낸다** — 타이핑마다 보내면
-  // 절반쯤 적힌 등록번호가 그 사이 문서에 찍힌다.
+  // 수사관 신원. **저장을 누를 때까지 서버에 안 보낸다** — 타이핑마다 보내면
+  // 절반쯤 적힌 값이 그 사이 문서에 찍힌다.
   const [form, setForm] = useState({
     name: '', barNo: '', firmName: '', position: '', barAssociation: '',
     phone: '', officePhone: '', officeAddress: '',
@@ -154,14 +153,13 @@ export default function ProfilePage() {
         {me?.name || me?.email}
       </Typography>
 
-      {/* ── 변호사 신원 (026) ──
-          **꾸미기 위한 칸이 아니다.** 등록번호·소속·사무실 번호는 내보낸 서면의
+      {/* ── 수사관 신원 ──
+          **꾸미기 위한 칸이 아니다.** 소속·계급·성명은 조서·수사보고의
           작성자 표시에 쓰인다 — 비어 있으면 그 자리가 빈 채로 나간다. */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" fontWeight={600} mb={0.5}>변호사 정보</Typography>
+        <Typography variant="h6" fontWeight={600} mb={0.5}>수사관 정보</Typography>
         <Typography variant="caption" color="text.secondary" display="block" mb={2.5}>
-          여기 적은 것이 <b>내보낸 서면의 작성자 표시</b>에 쓰입니다.
-          사무장은 등록번호를 비워 두십시오.
+          여기 적은 것이 <b>조서·수사보고의 작성자 표시</b>에 쓰입니다.
         </Typography>
 
         {saved && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSaved('')}>{saved}</Alert>}
@@ -170,45 +168,35 @@ export default function ProfilePage() {
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField label="이름" fullWidth value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            <TextField select label="직위" fullWidth value={form.position}
+            <TextField select label="계급/직위" fullWidth value={form.position}
               onChange={(e) => setForm({ ...form, position: e.target.value })}>
               <MenuItem value="">선택 안 함</MenuItem>
               {POSITIONS.map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}
             </TextField>
           </Stack>
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField label="변호사 등록번호" fullWidth value={form.barNo}
-              onChange={(e) => setForm({ ...form, barNo: e.target.value })}
-              placeholder="예: 12345"
-              helperText="사무장은 비워 둡니다" />
-            <TextField label="소속 지방변호사회" fullWidth value={form.barAssociation}
-              onChange={(e) => setForm({ ...form, barAssociation: e.target.value })}
-              placeholder="예: 서울지방변호사회" />
-          </Stack>
-
-          <TextField label="소속 (법무법인·사무소)" fullWidth value={form.firmName}
+          <TextField label="소속 (관서·부서)" fullWidth value={form.firmName}
             onChange={(e) => setForm({ ...form, firmName: e.target.value })}
-            placeholder="예: 법무법인 가나" />
+            placeholder="예: ○○경찰서 수사과 경제팀" />
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField label="사무실 전화" fullWidth value={form.officePhone}
               onChange={(e) => setForm({ ...form, officePhone: e.target.value })}
               placeholder="02-000-0000"
-              helperText="의뢰인에게 나가는 문서에 붙습니다" />
+              helperText="조서·수사보고에 붙습니다" />
             <TextField label="휴대폰" fullWidth value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="010-0000-0000"
               helperText="문서에 붙지 않습니다" />
           </Stack>
 
-          <TextField label="사무소 주소" fullWidth value={form.officeAddress}
+          <TextField label="관서 주소" fullWidth value={form.officeAddress}
             onChange={(e) => setForm({ ...form, officeAddress: e.target.value })} />
 
           <Box>
-            <Typography variant="body2" fontWeight={600} mb={0.5}>주요 취급분야</Typography>
+            <Typography variant="body2" fontWeight={600} mb={0.5}>담당 분야</Typography>
             <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-              사건을 만들 때 청구원인을 추천하는 데 쓸 예정입니다.
+              통계·분류에 쓸 예정입니다.
             </Typography>
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
               {PRACTICE_AREAS.map((a) => (

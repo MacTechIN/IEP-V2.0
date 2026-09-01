@@ -8,9 +8,11 @@
  *   내용증명 · 준비서면 · 답변서 · 위임장 · 사실조회신청 · 지급명령신청
  */
 import type { DocumentForm } from './types'
-import { complaint } from './complaint'
+// 소장(complaint)은 LEP 의 서식이다 — IEP 에서는 등록하지 않는다(파일은 내력으로 남긴다).
+import { statementRecord, suspectRecord, investigationReport } from './investigator'
 
-const FORMS: DocumentForm[] = [complaint]
+// 수사 서식. 순서 = 조사 흐름(진술→피의자신문→보고).
+const FORMS: DocumentForm[] = [statementRecord, suspectRecord, investigationReport]
 
 /** 화면이 그릴 목록. 스키마·페르소나처럼 밖에 나갈 이유가 없는 것은 빼고 준다. */
 export function listForms() {

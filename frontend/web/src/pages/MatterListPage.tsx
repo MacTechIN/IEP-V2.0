@@ -22,8 +22,8 @@ const STATUS_UI: Record<string, { label: string; color: string }> = {
 };
 
 /** 018 이 시드로 넣은 셋. 사무소가 늘리면 표에서 읽어 오게 바꾼다. */
-const CAUSES = ['채무불이행', '불법행위', '부당이득'];
-const MATTER_TYPES = ['민사', '형사', '가사', '행정', '자문', '기타'];
+const CAUSES = ['사기', '횡령·배임', '폭행·상해', '절도', '명예훼손·모욕', '기타'];  // 죄명 예시
+const MATTER_TYPES = ['경제', '지능', '사이버', '강력', '여성·청소년', '교통', '마약', '기타'];  // 수사 분야
 
 export default function MatterListPage() {
   const navigate = useNavigate();
@@ -102,7 +102,7 @@ export default function MatterListPage() {
         const id = res.data.id;
         // 상대방을 적어 뒀으면 함께 넣는다 — 다음 이해충돌 검사의 재료가 된다.
         if (adverseName.trim()) {
-          await apiClient.addAdverseParty(id, { name: adverseName.trim(), role: '상대방' })
+          await apiClient.addAdverseParty(id, { name: adverseName.trim(), role: '관련자' })
             .catch(() => {});
         }
         setOpen(false);
@@ -183,47 +183,47 @@ export default function MatterListPage() {
           <Stack spacing={2.5} mt={0.5}>
             <TextField label="사건명" required fullWidth value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="예: 대여금 반환 청구" />
+              placeholder="예: ○○ 사기 사건" />
             <Stack direction="row" spacing={2}>
-              <TextField select label="사건 유형" fullWidth value={form.matterType}
+              <TextField select label="분야" fullWidth value={form.matterType}
                 onChange={(e) => setForm({ ...form, matterType: e.target.value })}>
                 <MenuItem value="">선택 안 함</MenuItem>
                 {MATTER_TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
               </TextField>
-              <TextField select label="청구원인" fullWidth value={form.cause}
+              <TextField select label="죄명/혐의" fullWidth value={form.cause}
                 onChange={(e) => setForm({ ...form, cause: e.target.value })}
-                helperText="정하면 요건 체크리스트가 깔립니다">
+                helperText="나중에 정해도 됩니다">
                 <MenuItem value="">나중에</MenuItem>
                 {CAUSES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
               </TextField>
             </Stack>
-            <TextField label="사무소 사건번호 (선택)" fullWidth value={form.fileNo}
+            <TextField label="사건번호 (선택)" fullWidth value={form.fileNo}
               onChange={(e) => setForm({ ...form, fileNo: e.target.value })} />
 
             <Divider />
 
-            {/* **이해충돌은 사건을 만들기 전에 본다.** 만든 뒤에 알면 늦다. */}
+            {/* **관련자가 다른 사건에 이미 있는지 만들기 전에 본다.** 만든 뒤에 알면 늦다. */}
             <Box>
-              <Typography variant="subtitle2" fontWeight={700} mb={0.5}>이해충돌 확인</Typography>
+              <Typography variant="subtitle2" fontWeight={700} mb={0.5}>관련자 확인</Typography>
               <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-                상대방 이름을 적고 확인하세요. 표기가 달라도 찾습니다 (㈜·주식회사·괄호).
+                관련자 이름을 적고 확인하세요. 다른 사건에 이미 있는지 봅니다 (표기가 달라도 찾습니다).
               </Typography>
               <Stack direction="row" spacing={1}>
-                <TextField select size="small" sx={{ minWidth: 170 }} label="의뢰인(원고)"
+                <TextField select size="small" sx={{ minWidth: 170 }} label="대표 대상자"
                   value={clientId}
                   onChange={(e) => { setClientId(e.target.value); setNewClient(''); }}
-                  helperText="소장의 원고가 됩니다">
+                  helperText="사건의 대표 대상자가 됩니다">
                   {clients.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                 </TextField>
-                <TextField size="small" sx={{ minWidth: 150 }} label="새 의뢰인 이름"
+                <TextField size="small" sx={{ minWidth: 150 }} label="새 대상자 이름"
                   value={newClient}
                   onChange={(e) => { setNewClient(e.target.value); setClientId(''); }}
                   helperText="목록에 없으면 여기에" />
               </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-start' }}>
-                <TextField size="small" fullWidth label="상대방" value={adverseName}
+                <TextField size="small" fullWidth label="관련자" value={adverseName}
                   onChange={(e) => { setAdverseName(e.target.value); setConflict(null); }}
-                  placeholder="예: 주식회사 다라" />
+                  placeholder="예: 홍길동" />
                 <Button variant="outlined" onClick={runConflictCheck}
                   disabled={checking || !(adverseName.trim() || form.title.trim())}>
                   {checking ? '확인 중' : '확인'}
@@ -239,12 +239,12 @@ export default function MatterListPage() {
                     <Box component="ul" sx={{ pl: 2.5, my: 0.5 }}>
                       {conflict.asAdverse?.map((a: any, i: number) => (
                         <Typography component="li" variant="body2" key={`a${i}`}>
-                          <b>{a.name}</b> — 사건 「{a.title}」의 {a.role || '상대방'} ({a.status})
+                          <b>{a.name}</b> — 사건 「{a.title}」의 {a.role || '관련자'} ({a.status})
                         </Typography>
                       ))}
                       {conflict.asClient?.map((c: any, i: number) => (
                         <Typography component="li" variant="body2" key={`c${i}`}>
-                          <b>{c.name}</b> — <b>기존 의뢰인</b>입니다
+                          <b>{c.name}</b> — <b>다른 사건의 대표 대상자</b>입니다
                         </Typography>
                       ))}
                     </Box>

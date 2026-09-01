@@ -24,12 +24,10 @@ import { checkAnalysis } from '../services/analysisGate'
 import * as AI from '../services/openai'
 import * as REC from '../services/recordings'
 import * as SM from '../services/speakerMerge'
-import * as LA from '../services/legalAnalysis'
-import * as LP from '../services/legalPersist'
-import { maskPii } from '../lib/pii'
+import { maskPii, unmaskPii } from '../lib/pii'
+import * as SA from '../services/statementAnalysis'
 
 /** 페르소나를 고칠 때 올린다. 프롬프트 전후를 비교하려면 어느 판으로 뽑았는지 알아야 한다. */
-const PERSONA_REV = '2026-08-25'
 
 /**
  * 클라이언트가 구간을 겹치는 길이. **`UploadPage.tsx` 의 `OVERLAP_MS` 와 같아야 한다.**
@@ -646,66 +644,41 @@ export class AnalysisWorkflow extends WorkflowEntrypoint<Env, AnalysisParams> {
            note ? JSON.stringify(note) : null]))
       })
 
-      // ── 법률 분해 (LEP · 018)
+      // ── 진술 분석 (IEP · S4) — §0: 판정하지 않고 **근거를 짚는다**
       //
-      // **미팅 종류가 `legal` 일 때만 돈다.** 일반 미팅에 걸면 요건사실이 전부
-      // MISSING 으로 나와 아무 문제 없는 대화에 대고 "빠진 것 투성이" 라고 외친다 (016).
+      // LEP 의 「법률 분해」 자리를 대신한다. 모순·미확인·태도변화·미응답을
+      // **원문 인용과 함께** 짚되, 인용이 실제 전사에 없으면 버린다
+      // (statementAnalysis.ts 의 인용 대조 + 033 의 DB 제약, 두 겹).
       //
-      // **실패해도 미팅 분석은 완료로 끝난다** — 법률 분해는 얹는 것이지 전제가 아니다.
+      // **실패해도 조사 분석은 완료로 끝난다** — 진술 분석은 얹는 것이지 전제가 아니다.
       // 여기서 던지면 요약·녹취까지 함께 못 쓰게 된다.
-      await step.do('법률 분해', { retries: { limit: 1, delay: '20 seconds' } }, async () => {
-        /**
-         * **전사문이 없으면 「완료」라고만 말하지 않는다** (028).
-         *
-         * 2026-08-26 실측: 녹음이 안 붙은 상담을 분석하면 `completed 100%` 인데
-         * 사실관계·요건·시계열·증거가 전부 비어 있었다. 변호사는 그것을
-         * **「상담에서 건질 것이 없었다」로 읽는다.** 실제로는 분석이 아예 안 돈 것이다.
-         *
-         * 법률 상담일 때만 말한다 — 일반 미팅의 메타데이터 요약은 정상 모드다.
-         */
+      await step.do('진술 분석', { retries: { limit: 1, delay: '20 seconds' } }, async () => {
+        // 전사문이 없으면 「완료」라고만 말하지 않는다 (028 의 교훈).
         if (!stt?.text) {
-          const k = await withDb(env, (db) => db.query<{ kind: string }>(
-            'select kind from v2.meetings where id = $1', [meetingId]))
-          if (k.rows[0]?.kind === 'legal') {
-            await noteAnalysis(env, meetingId,
-              '녹음이 없어 전사문 없이 분석했습니다. 사실관계·요건·시계열·증거는 채워지지 않습니다. '
-              + '녹음을 추가하고 다시 분석하십시오.')
-          }
+          await noteAnalysis(env, meetingId,
+            '녹음/전사문이 없어 진술 분석을 하지 못했습니다. 녹음을 추가하고 다시 분석하십시오.')
           return
         }
         const meta = await withDb(env, async (db) => {
-          const r = await db.query<{ kind: string; matter_id: string | null; title: string
-                                     notes: string | null; cause: string | null }>(
-            `select m.kind, m.matter_id, m.title, m.notes, mt.cause
-               from v2.meetings m
-               left join v2.matters mt on mt.id = m.matter_id
-              where m.id = $1`, [meetingId])
+          const r = await db.query<{ kind: string; matter_id: string | null }>(
+            'select kind, matter_id from v2.meetings where id = $1', [meetingId])
           return r.rows[0]
         })
-        if (meta?.kind !== 'legal') return
+        const kind = meta?.kind ?? 'interview'
 
-        // 사건의 요건 목록을 **함께 넘긴다.** 모델에게 "무슨 요건이 필요하냐" 고 묻지 않는다 —
-        // 우리가 가진 목록으로 대조해야 지어내지 않는다.
-        const list = await withDb(env, (db) => LP.elementChecklist(db, meta.matter_id))
-        const ctx = [
-          meta.title ? `사건/상담: ${meta.title}` : '',
-          meta.cause ? `청구원인: ${meta.cause}` : '',
-          meta.notes ? `사전 메모: ${meta.notes}` : '',
-          list.length
-            ? `확인해야 할 요건사실:\n${list.map((t) => `- ${t.element}${t.hint ? ` (${t.hint})` : ''}`).join('\n')}`
-            : '',
-        ].filter(Boolean).join('\n')
+        // **화자 라벨이 붙은 전사**로 분석한다 — 인용에 「수사관/대상자」 호칭이 남게.
+        // 세그먼트가 없으면(단일 파일 등) 평문 전사로 물러난다.
+        const labeled = await withDb(env, async (db) => {
+          const r = await db.query<{ speaker_label: string; content: string }>(
+            `select speaker_label, content from v2.transcript_segments
+              where meeting_id = $1 order by sort_order`, [meetingId])
+          if (!r.rows.length) return stt.text
+          return r.rows.map((s) => `${s.speaker_label}: ${s.content}`).join('\n')
+        })
 
-        // **밖으로 나가기 전에 가린다** (021).
-        // 저장된 전사문은 그대로 둔다 — 그것은 증거다. 가리는 것은 전송본뿐이다.
-        // 날짜·금액·이름은 가리지 않는다. 가리면 요건도 시효도 계산할 수 없다.
-        const masked = maskPii(stt.text)
+        // **밖으로 나가기 전에 가린다** (021). 저장본이 아니라 전송본만 가린다.
+        const masked = maskPii(labeled)
         if (masked.matches.length) {
-          logLine('info', 'legal.pii_masked', {
-            mid: meetingId, count: masked.matches.length,
-            kinds: [...new Set(masked.matches.map((m) => m.kind))].join(','),
-          })
-          // 대응표는 **본문과 분리 보관한다.** 같은 곳에 두면 가린 의미가 없다.
           await withDb(env, async (db) => {
             for (const m of masked.matches) {
               await db.query(
@@ -713,119 +686,81 @@ export class AnalysisWorkflow extends WorkflowEntrypoint<Env, AnalysisParams> {
                  values ($1,$2,$3,$4) on conflict (meeting_id, token) do nothing`,
                 [meetingId, m.kind, m.token, m.original])
             }
-          }).catch((e) => logLine('warn', 'legal.pii_store_failed', {
+          }).catch((e) => logLine('warn', 'stmt.pii_store_failed', {
             mid: meetingId, err: e instanceof Error ? e.message : String(e),
           }))
         }
 
-        const result = await LA.analyzeLegalTranscript(env, {
-          transcript: masked.text, matterContext: ctx || undefined,
-        })
+        const result = await SA.analyzeStatement(env, { transcript: masked.text, kind })
         if (!result) {
-          // **조용히 넘어가지 않는다.** 법률 분해가 빠진 것을 화면이 알아야 한다 (SEP 의 교훈).
-          // 로그만 남기면 화면은 여전히 「완료」라고 말한다 — 그래서 DB 에도 남긴다 (028).
-          logLine('warn', 'legal.analysis_empty', { mid: meetingId })
+          // **조용히 넘어가지 않는다.** 진술 분석이 빠진 것을 화면이 알아야 한다 (SEP 의 교훈).
+          logLine('warn', 'stmt.analysis_empty', { mid: meetingId })
           await noteAnalysis(env, meetingId,
-            '법률 분해가 결과를 내지 못했습니다. 전사문이 너무 짧거나 모델 호출이 실패했을 수 있습니다. '
+            '진술 분석이 결과를 내지 못했습니다. 전사문이 너무 짧거나 모델 호출이 실패했을 수 있습니다. '
             + '다시 분석해 보시고, 반복되면 알려 주십시오.')
           return
         }
 
-        const saved = await withDb(env, (db) => LP.persistLegalAnalysis(db, {
-          meetingId, matterId: meta.matter_id ?? null, analysis: result,
-          model: env.OPENAI_LEGAL_MODEL || 'gpt-4o', personaRev: PERSONA_REV,
+        // 인용을 **되돌려** 저장한다 — 모델은 가린 본문을 봤으니 인용도 가려져 있다.
+        // 저장되는 근거는 사람이 읽을 원문이어야 한다.
+        const flags = result.flags.map((f) => ({
+          ...f, quotes: f.quotes.map((q) => unmaskPii(q, masked.matches)),
         }))
-        logLine('info', 'legal.persisted', { mid: meetingId, ...saved })
 
-        /**
-         * **법률 분해 결과를 「요약」 자리에 쓴다** (2026-08-26).
-         *
-         * 전에는 `case_summary` 와 `next_questions` 가 만들어지고도 **아무 데도 안 쓰였다.**
-         * 화면의 요약 칸은 영업 분석기가 채웠다. 같은 상담을 두 페르소나가 따로 보고
-         * 그중 **영업 쪽 답만 사람에게 보인** 셈이다.
-         *
-         * 실측 대조 (부당이득 상담) —
-         *   영업 요약: "고객은 2023년 3월에 …송금했으나 …피해를 입었다고 주장"
-         *              → 틀리지 않지만 **무슨 일이 있었나를 다시 말할 뿐**이다
-         *   법률 요약: "박정호에게 송금한 5천만원이 **법률상 원인 없이** 이루어진 것인지 여부"
-         *              → 변호사가 필요한 **한 줄**이다
-         *
-         * `case_summary` 는 필드 셋이라 그대로는 문장이 아니다. 여기서 엮는다 —
-         * 엮는 일을 모델에게 또 시키면 호출이 하나 더 는다.
-         */
-        const cs = result.case_summary
-        const summary = [
-          cs.matter_type ? `[${cs.matter_type}]` : '',
-          cs.core_dispute,
-          cs.client_position,
-        ].filter(Boolean).join(' ').trim() || null
+        // findings 저장 (delete+reinsert — 재분석하면 옛것을 지운다).
+        // 인용 대조는 서비스에서 끝났고, 033 이 DB 에서도 CONTRADICTION·UNANSWERED 의 refs≥2 를 막는다.
+        const persisted = await withDb(env, async (db) => {
+          await db.query('delete from v2.findings where meeting_id = $1', [meetingId])
+          let n = 0
+          for (const f of flags) {
+            await db.query(
+              `insert into v2.findings (meeting_id, matter_id, kind, detail, refs, question)
+               values ($1,$2,$3,$4,$5::jsonb,$6)`,
+              [meetingId, meta?.matter_id ?? null, f.kind, f.detail,
+               JSON.stringify(f.quotes), f.ask || null])
+            n++
+          }
+          return n
+        })
+        logLine('info', 'stmt.persisted', { mid: meetingId, findings: persisted })
 
-        // 「물어볼 것」 이 곧 다음 상담의 할 일이다. `next_questions` 와
-        // 불리한 사실·누락에 붙은 `question` 을 합치되 **같은 문장은 한 번만** 넣는다.
-        /**
-         * `next_questions` 와 `risk_and_gaps[].question` 은 **같은 것을 말만 바꿔 담는다.**
-         * 실측(2026-08-26): 여섯 줄 중 셋이 짝지어 중복이었다 —
-         *   "500만원 반환이 원금 변제인지 이자 지급인지 명확히 하십시오"
-         *   "500만원 반환이 원금 변제인지 이자 지급인지 명확히 할 필요가 있음. 이는 …"
-         * 문자열이 다르니 `Set` 으로는 안 걸린다.
-         *
-         * 그래서 **조사·어미·공백을 걷어낸 뼈대**로 비교한다. 겹치면 **먼저 온 것**을 남긴다 —
-         * `next_questions` 가 앞이고, 그쪽이 사람에게 시키는 말투("~하십시오")라 읽기 좋다.
-         */
-        const skeleton = (q: string) => q
-          .replace(/[.,·…\s]/g, '')
-          .replace(/(하십시오|할 필요가 있음|이 필요함|해야 함|확인이 필요함|입니다|습니다|함)$/g, '')
-          .slice(0, 40)
-        const actionItems: string[] = []
+        // 요약·핵심·「다음에 확인할 것」을 화면의 요약 칸에 쓴다.
+        // 「물어볼 질문」(UNVERIFIED 의 ask)도 확인 목록에 합친다. 같은 문장은 한 번만.
+        const keyPoints = (result.key_points ?? []).map((x) => String(x).trim())
+          .filter(Boolean).slice(0, 12)
         const seenQ = new Set<string>()
+        const actionItems: string[] = []
         for (const raw of [
-          ...(result.next_questions ?? []),
-          ...(result.risk_and_gaps ?? []).map((g) => g.question).filter(Boolean),
+          ...(result.next_checks ?? []),
+          ...flags.map((f) => f.ask).filter(Boolean) as string[],
         ]) {
           const q = String(raw).trim()
-          if (!q) continue
-          const k = skeleton(q)
-          if (!k || seenQ.has(k)) continue
+          const k = q.replace(/[.,·…\s]/g, '').slice(0, 40)
+          if (!q || !k || seenQ.has(k)) continue
           seenQ.add(k)
           actionItems.push(q)
         }
-
-        // 주장과 위험을 핵심 포인트로. 사람이 목록으로 훑는 자리다.
-        const keyPoints = [
-          ...(result.claims ?? []).map((cl) => cl.claim).filter(Boolean),
-          ...(result.risk_and_gaps ?? []).map((g) => g.detail).filter(Boolean),
-        ].map((x) => String(x).trim()).filter(Boolean).slice(0, 12)
+        const summary = (result.summary || '').trim() || null
 
         await withDb(env, async (db) => {
           await db.query(
             `insert into v2.analysis_results (meeting_id) values ($1)
              on conflict (meeting_id) do nothing`, [meetingId])
-          /**
-           * **영업 값을 비운다.** 「기본 분석」 을 건너뛰면 그 칸을 *안 쓸* 뿐,
-           * 지난 실행이 써 둔 값은 그대로 남는다 — 실측에서 `scores`·`deal_signals`·
-           * `customer_needs` 가 남아 있었다. 그대로 두면 **성과 화면이 법률 상담을
-           * 영업 지표로 세고**, 다시 분석해도 옛 점수가 계속 따라다닌다.
-           */
+          // **영업 값을 비운다.** 지난 실행이 써 둔 점수·follow-up 이 남으면 조사에 영업 지표가 붙는다.
+          // 셋(scores·deal_signals·customer_needs)은 NOT NULL 이라 null 이 아니라 default 로 되돌린다.
           await db.query(
             `update v2.analysis_results set
-               summary = $2, key_points = $3, action_items = $4, follow_up_draft = $5,
-               -- **셋은 NOT NULL 이다.** null 을 넣으면 그 자리에서 터진다
-               -- (2026-08-26 실측: 분석이 95%에서 failed).
-               -- 「점수 없음」 을 뜻하는 것은 null 이 아니라 **기본값**이다.
+               summary = $2, key_points = $3, action_items = $4, follow_up_draft = null,
                scores = default, deal_signals = default, customer_needs = default,
-               -- 나머지는 nullable 이라 비운다
                psych_insights = null, coaching = null, scorecard = null,
                sentiment = null, interests = null, concerns = null,
                updated_at = now()
              where meeting_id = $1`,
-            // `key_points` 는 **`TEXT[]`** 다. 문자열로 넣으면 그 자리에서 터진다.
-            [meetingId, summary, keyPoints,
-             JSON.stringify(actionItems), result.follow_up_draft || null])
+            [meetingId, summary, keyPoints, JSON.stringify(actionItems)])
         })
-        logLine('info', 'legal.summary_written', {
-          mid: meetingId, summaryChars: summary?.length ?? 0,
-          actions: actionItems.length, keyPoints: keyPoints.length,
-          mail: (result.follow_up_draft || '').length,
+        logLine('info', 'stmt.summary_written', {
+          mid: meetingId, kind, summaryChars: summary?.length ?? 0,
+          findings: persisted, actions: actionItems.length, keyPoints: keyPoints.length,
         })
       })
 

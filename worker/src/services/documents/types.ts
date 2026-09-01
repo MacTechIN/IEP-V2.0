@@ -34,8 +34,8 @@ export interface DocContext {
   elements: Array<{ element: string; status: string; note: string | null }>
   timeline: Array<{ occurredOn: string | null; precision: string | null; what: string; legalMeaning: string | null }>
   evidence: Array<{ kind: string; what: string; status: string; holder: string | null; proves: string | null }>
-  /** 이 상담에서 나온 확인할 것 (불리한 사실 포함) */
-  findings: Array<{ kind: string; severity: string; detail: string; question: string | null }>
+  /** 이 조사에서 나온 확인할 것. 진술 findings 는 `refs`(원문 인용)를 들고 온다 (§0). */
+  findings: Array<{ kind: string; severity: string; detail: string; question: string | null; refs: string[] }>
   /** 법률 분해 원문 (있으면) */
   legal: Record<string, unknown> | null
   /** 작성자 — 프로필 (026) */
@@ -43,6 +43,23 @@ export interface DocContext {
     name: string | null; barNo: string | null; firmName: string | null
     position: string | null; officePhone: string | null; officeAddress: string | null
   } | null
+  /**
+   * 조사(meeting) 자료 — **수사 서식(조서·수사보고)이 쓴다.** `meetingId` 를 준 경우에만 채워진다.
+   * 소장은 사건(matter) 중심이라 이 값을 안 본다.
+   */
+  meeting: {
+    id: string; title: string; kind: string
+    /** 조사 일시 (start_time 없으면 created_at) */
+    occurredAt: string | null
+    /** 조사 장소·비고 (notes) */
+    notes: string | null
+  } | null
+  /** 화자 라벨이 붙은 전사 — 조서의 문답이 된다. 없으면 빈 배열. */
+  transcript: Array<{ speakerLabel: string; content: string }>
+  /** 대상자 인적사항 (032). **사람이 적은 것만 있다** — 비어 있으면 조서에 빈칸으로 둔다 (§6-D). */
+  subjects: Array<{ role: string; displayName: string | null; speakerLabel: string | null }>
+  /** 진술 분석 요지 (S4) — 수사보고가 쓴다. */
+  analysis: { summary: string | null; keyPoints: string[]; actionItems: string[] } | null
   /** 화면에서 받은 값. 소가·법원처럼 사건에 아직 없는 것 */
   params: Record<string, unknown>
 }
@@ -109,4 +126,10 @@ export interface DocumentForm {
    * 금액·날짜·당사자처럼 틀리면 안 되는 것은 여기서 우리 값으로 박아 넣는다.
    */
   render: (result: Record<string, unknown>, ctx: DocContext) => string
+  /**
+   * **모델 없이 조립하는 서식.** 조서·수사보고처럼 「있는 그대로 기록」 하는 문서는
+   * 모델을 부르지 않는다 — 지어낼 여지를 아예 두지 않는 것이 §0 에 맞다.
+   * 있으면 `generateDocument` 가 persona/schema/brief/render 대신 이것만 쓴다.
+   */
+  assemble?: (ctx: DocContext) => { title: string; body: string; result: Record<string, unknown> }
 }
