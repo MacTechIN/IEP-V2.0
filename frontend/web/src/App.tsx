@@ -113,8 +113,9 @@ function TopBar() {
       {/* 좁아지면 밀려나는 대신 줄어든다 — 로고가 화면 밖으로 나가지 않게 */}
       <Toolbar sx={{ gap: 1, minWidth: 0 }}>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-          <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '1.25rem', fontWeight: 700 }}>
-            IEP
+          <Link to="/" title="Investigation Enablement Platform V2.0 · by Sam LEE"
+            style={{ color: 'white', textDecoration: 'none', fontSize: '1.25rem', fontWeight: 700 }}>
+            IEP V2.0
           </Link>
         </Box>
 

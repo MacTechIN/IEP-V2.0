@@ -21,8 +21,8 @@ import { TRANSCRIBE_TEXT, degradedText, type TranscribeNotes } from '../lib/tran
 // 실시간 자막 서버. 빈 값이면 자막 기능이 **조용히 꺼진다** —
 // 그래서 여기도 배포 빌드의 기본값을 둔다 (api.ts 와 같은 이유).
 const STREAM_URL = (import.meta.env.VITE_STREAM_URL as string | undefined)
-  // IEP 실시간 자막 서버는 아직 없다(S5 에서 구축). 그때까지 빈 값 → 자막 기능 자동 비활성.
-  || '';
+  // IEP 실시간 자막 서버 (Cloud Run · asia-northeast3). S5 에서 배포됨 (2026-09-02).
+  || 'wss://iep-stream-762755478365.asia-northeast3.run.app';
 
 function nowLocal(): string {
   const d = new Date();

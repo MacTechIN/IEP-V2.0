@@ -7,6 +7,20 @@
 
 ---
 
+## [0.4.0] — 2026-09-02 — 실시간 자막(S5) 배포 · 로고 IEP V2.0
+
+- **S5 실시간 자막 — Cloud Run 스트림 배포.** `stream-service`(WebSocket 게이트웨이, Deepgram nova-2 주 +
+  Google STT 백업)를 Cloud Run(`iep-stream`, asia-northeast3)에 배포. lep-stream 설정 복제
+  (timeout 3600·concurrency 80·maxScale 5·cpu 1·512Mi·public). 시크릿은 Secret Manager
+  (`iep-jwt` = worker 와 같은 JWT_SECRET, `iep-deepgram` = 기존 키 재사용). `/health` = ok 확인.
+  프론트 `VITE_STREAM_URL` 기본값을 `wss://iep-stream-…run.app` 으로 → 녹음 화면에 **실시간 자막 스위치 등장**.
+  (실시간 코칭 25초는 이와 별개로 계속 동작.)
+- **로고 → IEP V2.0** (상단 바·로그인). 전체 이름 `Investigation Enablement Platform V2.0 · by Sam LEE` 툴팁.
+
+확인: 서면 만들기(조서·수사보고)는 정상 — dhlee 로 폼 3종 makeable + 서면 7건 반환 검증(백엔드 이상 없음).
+
+---
+
 ## [0.3.1] — 2026-09-01 — 사용자 가이드 IEP 재작성 · 조서 날짜 버그 · 모바일 로그인
 
 - **사용자 가이드(guide.html) 전면 재작성** — LEP(상담·소장·변호사·요건사실 924줄)를 걷어내고
