@@ -57,7 +57,6 @@ export default function HomePage() {
   }, []);
 
   const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-  const maxTrend = Math.max(100, ...(data?.scoreTrend || [0]));
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -71,11 +70,11 @@ export default function HomePage() {
       ) : (
         <>
           {/* 지표 요약 */}
+          {/* 지표 — **점수는 없다** (§0). 개수만 센다. */}
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={6} md={3}><MetricCard label="이번주 미팅" value={data?.metrics.meetingsThisWeek ?? 0} sub="건" /></Grid>
-            <Grid item xs={6} md={3}><MetricCard label="평균 점수" value={data?.metrics.avgScore ?? 0} sub="/ 100" /></Grid>
-            <Grid item xs={6} md={3}><MetricCard label="처리할 액션" value={data?.metrics.pendingActions ?? 0} sub="건" /></Grid>
-            <Grid item xs={6} md={3}><MetricCard label="분석 대기/진행" value={data?.metrics.processing ?? 0} sub="건" /></Grid>
+            <Grid item xs={12} md={4}><MetricCard label="이번주 조사" value={data?.metrics.meetingsThisWeek ?? 0} sub="건" /></Grid>
+            <Grid item xs={6} md={4}><MetricCard label="처리할 확인" value={data?.metrics.pendingActions ?? 0} sub="건" /></Grid>
+            <Grid item xs={6} md={4}><MetricCard label="분석 대기/진행" value={data?.metrics.processing ?? 0} sub="건" /></Grid>
           </Grid>
 
           {/* 핵심 CTA */}
@@ -84,34 +83,12 @@ export default function HomePage() {
             onClick={() => navigate('/upload')}
             sx={{ mb: 3, py: 1.8, fontSize: '1.05rem', fontWeight: 700 }}
           >
-            ＋ 새 미팅 녹음 / 오디오 업로드
+            ＋ 새 조사 녹음 / 오디오 업로드
           </Button>
 
           <Grid container spacing={3}>
-            {/* 좌: 성과 + 코칭 */}
+            {/* 좌: 코칭 (§0 — 성과·점수 카드는 두지 않는다) */}
             <Grid item xs={12} md={6}>
-              <Card sx={{ mb: 3 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} mb={1}>📈 내 성과</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 2 }}>
-                    <Typography variant="h3" sx={{ fontWeight: 700, color: '#0066CC' }}>{data?.metrics.avgScore ?? 0}</Typography>
-                    <Typography variant="body2" color="text.secondary">평균 점수</Typography>
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">최근 점수 추이</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.75, height: 60, mt: 1 }}>
-                    {(data?.scoreTrend || []).length === 0 && (
-                      <Typography variant="body2" color="text.secondary">아직 데이터가 없습니다</Typography>
-                    )}
-                    {(data?.scoreTrend || []).map((s, i) => (
-                      <Box key={i} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <Box sx={{ width: '70%', height: `${(s / maxTrend) * 100}%`, bgcolor: '#0066CC', borderRadius: 1, minHeight: 4 }} />
-                        <Typography variant="caption" sx={{ fontSize: 10, mt: 0.5 }}>{s}</Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight={700} mb={1}>🎯 코칭 요약</Typography>
@@ -125,7 +102,7 @@ export default function HomePage() {
                       ))}
                       <Button size="small" sx={{ alignSelf: 'flex-start', mt: 1 }}
                         onClick={() => data.coaching && navigate(`/meetings/${data.coaching.meetingId}`)}>
-                        해당 미팅 보기 →
+                        해당 조사 보기 →
                       </Button>
                     </Stack>
                   ) : (
@@ -137,9 +114,9 @@ export default function HomePage() {
               </Card>
             </Grid>
 
-            {/* 우: 할 일 + 팔로업 */}
+            {/* 우: 할 일 (팔로업 이메일 카드는 영업이라 제거) */}
             <Grid item xs={12} md={6}>
-              <Card sx={{ mb: 3 }}>
+              <Card>
                 <CardContent>
                   <Typography variant="h6" fontWeight={700} mb={1}>✅ 오늘 할 일</Typography>
                   {data?.actionItems?.length ? (
@@ -164,34 +141,14 @@ export default function HomePage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={700} mb={1}>✉️ 팔로업 이메일 대기</Typography>
-                  {data?.followUpsPending?.length ? (
-                    <Stack spacing={1}>
-                      {data.followUpsPending.map((f, i) => (
-                        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Box>
-                            <Typography variant="body2" fontWeight={500}>{f.customerName || f.title}</Typography>
-                            <Typography variant="caption" color="text.secondary">{f.title}</Typography>
-                          </Box>
-                          <Button size="small" onClick={() => navigate(`/meetings/${f.meetingId}`)}>초안 보기</Button>
-                        </Box>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">대기 중인 팔로업 이메일이 없습니다.</Typography>
-                  )}
-                </CardContent>
-              </Card>
             </Grid>
           </Grid>
 
-          {/* 최근 미팅 */}
+          {/* 최근 조사 */}
           <Card sx={{ mt: 3 }}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="h6" fontWeight={700}>🕑 최근 미팅</Typography>
+                <Typography variant="h6" fontWeight={700}>🕑 최근 조사</Typography>
                 <Button size="small" onClick={() => navigate('/meetings')}>전체 보기 →</Button>
               </Box>
               <Divider sx={{ mb: 1 }} />
@@ -205,16 +162,13 @@ export default function HomePage() {
                       <Typography variant="body2" color="text.secondary" sx={{ width: { xs: 90, sm: 120 }, flexShrink: 0 }}>
                         {m.customerName || '-'}
                       </Typography>
-                      <Typography variant="body2" sx={{ width: 48, fontWeight: 700, color: '#0066CC' }}>
-                        {m.overallScore ?? '-'}
-                      </Typography>
                       <Chip size="small" label={statusLabel(m.status)} color={statusColor(m.status)} variant="outlined" />
                     </Box>
                   ))}
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                  아직 미팅이 없습니다. 위 버튼으로 첫 미팅을 만들어 보세요.
+                  아직 조사가 없습니다. 위 버튼으로 첫 조사를 만들어 보세요.
                 </Typography>
               )}
             </CardContent>

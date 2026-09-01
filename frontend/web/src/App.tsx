@@ -114,7 +114,7 @@ function TopBar() {
       <Toolbar sx={{ gap: 1, minWidth: 0 }}>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '1.25rem', fontWeight: 700 }}>
-            LEP
+            IEP
           </Link>
         </Box>
 

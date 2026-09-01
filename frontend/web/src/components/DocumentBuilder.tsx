@@ -7,8 +7,8 @@
 //
 // 1. **재료가 없으면 버튼을 열지 않는다.** 무엇이 없는지 그 자리에 적는다 —
 //    「왜 못 만드나」 에 답이 되어야 한다.
-// 2. **보낼 자료를 먼저 보여 준다.** 변호사가 읽고 「이건 틀렸다」 를 알아야 보탤 수 있다.
-// 3. **변호사가 보탠 것이 자료를 이긴다.** 그렇게 서버에 적혀 있고, 화면도 그렇게 말한다.
+// 2. **보낼 자료를 먼저 보여 준다.** 수사관이 읽고 「이건 틀렸다」 를 알아야 보탤 수 있다.
+// 3. **수사관이 보탠 것이 자료를 이긴다.** 그렇게 서버에 적혀 있고, 화면도 그렇게 말한다.
 
 import { useEffect, useState } from 'react';
 import {
@@ -119,10 +119,10 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
       let id = pickClient;
       if (!id && newClient.trim()) {
         const c = await apiClient.createCustomer({ companyName: newClient.trim() });
-        if (!c.success) throw new Error('의뢰인을 만들지 못했습니다');
+        if (!c.success) throw new Error('대상자를 만들지 못했습니다');
         id = c.data.id;
       }
-      if (!id) { setFixMsg('의뢰인을 고르거나 이름을 적으십시오.'); setFixing(false); return; }
+      if (!id) { setFixMsg('대상자를 고르거나 이름을 적으십시오.'); setFixing(false); return; }
       const r = await apiClient.updateMatter(matterId!, { clientId: id });
       if (r.success) { setNewClient(''); setPickClient(''); void load(); onChanged?.(); }
       else setFixMsg('연결하지 못했습니다.');
@@ -144,13 +144,13 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
       {m.fix === 'client' && (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}
           alignItems={{ sm: 'center' }} sx={{ mt: 1, ml: 1.5 }}>
-          <TextField select size="small" label="의뢰인 고르기" sx={{ minWidth: 190 }}
+          <TextField select size="small" label="대상자 고르기" sx={{ minWidth: 190 }}
             value={pickClient}
             onChange={(e) => { setPickClient(e.target.value); setNewClient(''); }}>
             {clients.map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
           </TextField>
           <Typography variant="caption" color="text.secondary">또는</Typography>
-          <TextField size="small" label="새 의뢰인 이름" sx={{ minWidth: 170 }}
+          <TextField size="small" label="새 대상자 이름" sx={{ minWidth: 170 }}
             value={newClient}
             onChange={(e) => { setNewClient(e.target.value); setPickClient(''); }} />
           <Button size="small" variant="contained" disabled={fixing}
@@ -237,10 +237,10 @@ export default function DocumentBuilder({ matterId, meetingId, onChanged }: {
     setAttaching(false);
   };
 
-  // **사건에 붙지 않은 상담에서는 서면을 만들 수 없다** — 서면은 사건의 것이다.
+  // **사건에 붙지 않은 조사에서는 서면을 만들 수 없다** — 서면은 사건의 것이다.
   //
   // 예전에는 여기서 「먼저 사건에 연결해야 합니다」 라고만 했다. **연결하는 길이
-  // 어디에도 없었다** — 사건은 상담을 만들 때만 고를 수 있었고, 끝난 상담은 방법이 없었다.
+  // 어디에도 없었다** — 사건은 조사를 만들 때만 고를 수 있었고, 끝난 조사는 방법이 없었다.
   // 막힌 자리에서 바로 풀 수 있어야 한다.
   if (!matterId) {
     return (

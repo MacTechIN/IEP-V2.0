@@ -66,7 +66,7 @@ export default function MeetingDetailPage() {
   // 녹취는 참고 자료다 — 기본은 접어 둔다
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [transcriptQuery, setTranscriptQuery] = useState('');
-  // 조사노트가 첫 탭이다 — 나중에 조사을 되짚을 때 가장 먼저 보는 것이 정리된 노트이고,
+  // 조사노트가 첫 탭이다 — 나중에 조사를 되짚을 때 가장 먼저 보는 것이 정리된 노트이고,
   // 녹취는 그 근거를 확인할 때 옆에서 본다. 그래서 둘을 한 탭에 나란히 둔다.
   const [tab, setTab] = useState<'note' | 'report' | 'metrics' | 'legal' | 'statement'>('note');
   /**
@@ -370,12 +370,12 @@ export default function MeetingDetailPage() {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/meetings')}>
           돌아가기
         </Button>
-        <Typography sx={{ mt: 2 }}>조사을 찾을 수 없습니다.</Typography>
+        <Typography sx={{ mt: 2 }}>조사를 찾을 수 없습니다.</Typography>
       </Container>
     );
   }
 
-  /** 법률 상담인가. 「고객」·「영업자」 라는 말을 쓰지 않는 자리들이 이 값을 본다 (016). */
+  /** 법률 조사인가. 「대상자」·「영업자」 라는 말을 쓰지 않는 자리들이 이 값을 본다 (016). */
   const legalKind = false;  // IEP: 법률 분해 없음 (S4 에서 진술 분석으로 교체)
 
   return (
@@ -394,7 +394,7 @@ export default function MeetingDetailPage() {
             비밀유지 · 비닉권 대상
           </Typography>
           <Typography variant="caption" sx={{ color: '#991B1B', display: 'block', mt: 0.25 }}>
-            변호사와 의뢰인 사이의 상담 기록입니다. 내보내는 문서에도 같은 고지가 함께 박힙니다.
+            수사관과 대상자 사이의 조사 기록입니다. 내보내는 문서에도 같은 고지가 함께 박힙니다.
           </Typography>
         </Paper>
       )}
@@ -448,7 +448,7 @@ export default function MeetingDetailPage() {
       {/*
         **분석이 덜 된 것을 「완료」로 넘기지 않는다** (028).
 
-        2026-08-26 실측: 녹음이 안 붙은 법률 상담이 `completed 100%` 인데 사실관계가
+        2026-08-26 실측: 녹음이 안 붙은 법률 조사가 `completed 100%` 인데 사실관계가
         전부 비어 있었다. 그대로 두면 수사관은 **「조사에서 건질 것이 없었다」로 읽는다.**
         탭을 열기 **전에** 보여야 하므로 탭 바로 위에 둔다.
       */}
@@ -474,8 +474,8 @@ export default function MeetingDetailPage() {
         {/* 진술 분석(S4) — 모순·미확인·태도변화. 조사 문서라 항상 보인다. */}
         <Tab label={`진술 분석${legal?.findings?.length ? ` · ${legal.findings.length}` : ''}`} value="statement" />
         <Tab label="리포트" value="report" />
-        {/* **법률 상담에는 지표 탭을 띄우지 않는다.**
-            딜 강도·조사 점수·스코어카드는 전부 영업 척도다. 법률 상담에 붙이면
+        {/* **법률 조사에는 지표 탭을 띄우지 않는다.**
+            딜 강도·조사 점수·스코어카드는 전부 영업 척도다. 법률 조사에 붙이면
             수사관이 자기 조사를 「딜」로 채점당한다 — 이 제품이 하려는 일이 아니다. */}
         {!legalKind && <Tab label="지표" value="metrics" />}
       </Tabs>
@@ -533,9 +533,9 @@ export default function MeetingDetailPage() {
         </Stack>
       )}
 
-      {/* ── 사실관계 탭 (법률 상담 전용, 018) ──
+      {/* ── 사실관계 탭 (법률 조사 전용, 018) ──
           **순서가 중요하다.** 확인할 것 → 요건 → 시계열 → 증거.
-          변호사가 상담 직후 가장 먼저 알아야 하는 것은 "무엇이 빠졌나" 이지
+          수사관이 조사 직후 가장 먼저 알아야 하는 것은 "무엇이 빠졌나" 이지
           "무슨 말이 오갔나" 가 아니다. 오간 말은 녹취 탭에 있다. */}
       {tab === 'legal' && (
         <Stack spacing={3}>
@@ -543,7 +543,7 @@ export default function MeetingDetailPage() {
             <Paper sx={{ p: 3, bgcolor: '#F1F5F9', border: '1px solid #CBD5E1' }}>
               <Typography variant="body2" fontWeight={600}>법률 분해 결과가 없습니다</Typography>
               <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                분석이 아직 끝나지 않았거나, 이 상담에서 분해할 내용을 찾지 못했습니다.
+                분석이 아직 끝나지 않았거나, 이 조사에서 분해할 내용을 찾지 못했습니다.
               </Typography>
             </Paper>
           )}
@@ -552,7 +552,7 @@ export default function MeetingDetailPage() {
           <Paper sx={{ p: 3 }}>
             <Typography variant="subtitle2" fontWeight={700} mb={0.5}>확인할 것</Typography>
             <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
-              빠진 것 · 앞뒤가 어긋나는 것 · 의뢰인에게 불리한 정황
+              빠진 것 · 앞뒤가 어긋나는 것 · 대상자에게 불리한 정황
             </Typography>
             {legal?.findings?.length ? (
               <Stack spacing={1.5}>
@@ -584,17 +584,17 @@ export default function MeetingDetailPage() {
               </Stack>
             ) : (
               <Typography variant="body2" color="text.secondary">
-                이 상담에서는 확인할 것이 나오지 않았습니다.
+                이 조사에서는 확인할 것이 나오지 않았습니다.
               </Typography>
             )}
           </Paper>
 
-          {/* 2) 요건 — **사건 전체의 상태다.** 이 상담만의 것이 아니다 */}
+          {/* 2) 요건 — **사건 전체의 상태다.** 이 조사만의 것이 아니다 */}
           {legal?.elements?.length > 0 && (
             <Paper sx={{ p: 3 }}>
               <Typography variant="subtitle2" fontWeight={700} mb={0.5}>요건사실</Typography>
               <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
-                이 사건 전체 기준입니다 — 다른 상담에서 채워진 것도 함께 보입니다
+                이 사건 전체 기준입니다 — 다른 조사에서 채워진 것도 함께 보입니다
               </Typography>
               <Stack spacing={1}>
                 {legal.elements.map((e: any, i: number) => {
@@ -740,7 +740,7 @@ export default function MeetingDetailPage() {
             {renoting && <LinearProgress sx={{ mb: 2 }} />}
             {analysis && (
               <>
-                {/* 리뷰용 조사 노트 — 나중에 이것만 보고 조사을 되짚을 수 있어야 한다.
+                {/* 리뷰용 조사 노트 — 나중에 이것만 보고 조사를 되짚을 수 있어야 한다.
                     녹취 404개를 다시 읽지 않으려면 주제별로 찾아갈 수 있어야 한다. */}
                 {analysis.meetingNote && (analysis.meetingNote.topics?.length || analysis.meetingNote.headline) && (
                   <Paper sx={{ p: 3, mb: 3 }}>
@@ -753,7 +753,7 @@ export default function MeetingDetailPage() {
                     )}
 
                     {/* 핵심 키워드 — **맨 아래에 있던 것을 위로 올렸다.**
-                        조사을 되짚을 때 가장 먼저 찾는 것이 사람·회사·금액·일정이고,
+                        조사를 되짚을 때 가장 먼저 찾는 것이 사람·회사·금액·일정이고,
                         주제 여섯 개를 지나야 나오면 그 역할을 못 한다.
                         누르면 녹취에서 그 말을 찾아 준다 — 이미 있는 검색을 재사용한다. */}
                     {analysis.meetingNote.mentions && analysis.meetingNote.mentions.length > 0 && (
@@ -1062,7 +1062,7 @@ export default function MeetingDetailPage() {
               <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>🧠 심리 인사이트</Typography>
               <Grid container spacing={2}>
                 {[
-                  // 법률 상담에서는 「고객」·「영업자」가 아니다
+                  // 법률 조사에서는 「대상자」·「영업자」가 아니다
                   { k: legalKind ? '대상자 상태' : '대상자 상태', v: analysis.psychInsights.customer_state },
                   { k: legalKind ? '수사관 자신감' : '수사관 자신감', v: analysis.psychInsights.rep_confidence },
                   { k: '답변 품질', v: analysis.psychInsights.answer_quality },
@@ -1121,9 +1121,9 @@ export default function MeetingDetailPage() {
           )}
 
             {/* 대상자 니즈 — **영업 분석기의 결과다.**
-                법률 상담에서는 그것을 아예 만들지 않으므로(2.16.0) 칸도 띄우지 않는다.
+                법률 조사에서는 그것을 아예 만들지 않으므로(2.16.0) 칸도 띄우지 않는다.
                 빈 상자를 「분석했는데 아무것도 없었다」 로 읽으면 안 된다.
-                일반·수임 상담이라도 값이 비면 감춘다 — 제목만 있는 상자는 신뢰를 깎는다. */}
+                일반·수임 조사가라도 값이 비면 감춘다 — 제목만 있는 상자는 신뢰를 깎는다. */}
             {!legalKind && analysis.customerNeeds?.primary && (
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -1210,7 +1210,7 @@ export default function MeetingDetailPage() {
           )}
 
           {/* 서면 만들기 (029) — **팔로업 이메일 다음, 리포트 탭 맨 끝.**
-              상담을 다 읽은 자리에 두어야 「이제 무엇을 쓸까」 로 이어진다. */}
+              조사를 다 읽은 자리에 두어야 「이제 무엇을 쓸까」 로 이어진다. */}
           <DocumentBuilder matterId={meeting.matterId ?? null} meetingId={meeting.id}
             onChanged={() => setReload((n) => n + 1)} />
         </>

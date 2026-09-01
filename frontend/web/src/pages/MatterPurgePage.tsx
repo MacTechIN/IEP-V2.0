@@ -106,7 +106,7 @@ export default function MatterPurgePage() {
       </Stack>
       <Typography variant="body2" color="text.secondary" mb={3}>
         지우기 전에 <b>무엇이 사라지고 무엇이 남는지</b> 보여 드립니다.
-        <b> 상담과 녹음은 지워지지 않습니다</b> — 사건에서 떨어져 나올 뿐입니다.
+        <b> 조사와 녹음은 지워지지 않습니다</b> — 사건에서 떨어져 나올 뿐입니다.
         지우면 <b>사본이 화면에 남고</b> 거기서 내려받을 수 있습니다.
       </Typography>
 
@@ -119,7 +119,7 @@ export default function MatterPurgePage() {
           <Typography variant="body2">
             서면 {done.preview.destroys.documents}건 · 기한 {done.preview.destroys.deadlines}건 ·
             요건 {done.preview.destroys.elements}건이 함께 사라졌고,
-            상담 {done.preview.detaches.meetings}건(녹음 {done.preview.detaches.recordings}개)은
+            조사 {done.preview.detaches.meetings}건(녹음 {done.preview.detaches.recordings}개)은
             <b> 그대로 남아 있습니다.</b>
           </Typography>
           <Button size="small" variant="outlined" sx={{ mt: 1 }}
@@ -156,7 +156,7 @@ export default function MatterPurgePage() {
                     <TableCell>{String(c.closed_on).slice(0, 10)}</TableCell>
                     <TableCell>{c.retention_years}년</TableCell>
                     <TableCell align="right">
-                      상담 {c.meetings} · 기한 {c.deadlines} · 증거 {c.evidence}
+                      조사 {c.meetings} · 기한 {c.deadlines} · 증거 {c.evidence}
                     </TableCell>
                     <TableCell align="right">
                       <Button size="small" color="error"
@@ -215,7 +215,7 @@ export default function MatterPurgePage() {
               <Alert severity="info">
                 <Typography variant="body2" fontWeight={700}>남습니다</Typography>
                 <Typography variant="body2">
-                  상담 {preview.detaches.meetings}건 · <b>녹음 {preview.detaches.recordings}개</b> —
+                  조사 {preview.detaches.meetings}건 · <b>녹음 {preview.detaches.recordings}개</b> —
                   사건에서 떨어져 나올 뿐 지워지지 않습니다.
                   나중에 다른 사건에 다시 붙일 수 있습니다.
                 </Typography>

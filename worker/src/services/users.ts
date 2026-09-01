@@ -9,6 +9,7 @@ export interface UserRow {
   // 수사관 프로필 (026). 전부 nullable — **사무장은 bar_no 가 없다**
   bar_no?: string | null; firm_name?: string | null; position?: string | null
   bar_association?: string | null; practice_areas?: string[] | null
+  agency?: string | null
   phone?: string | null; office_phone?: string | null; office_address?: string | null
   created_at: string; updated_at: string
 }
@@ -26,6 +27,7 @@ export const toUser = (r: UserRow) => ({
   firmName: r.firm_name ?? null,
   position: r.position ?? null,
   barAssociation: r.bar_association ?? null,
+  agency: r.agency ?? null,
   practiceAreas: r.practice_areas ?? [],
   phone: r.phone ?? null,
   officePhone: r.office_phone ?? null,
@@ -37,7 +39,7 @@ export const toUser = (r: UserRow) => ({
 export async function getUser(db: pg.Client, userId: string) {
   return queryOne<UserRow>(db,
     `select id, email, name, role, department, monthly_target_krw,
-            bar_no, firm_name, position, bar_association, practice_areas,
+            bar_no, firm_name, position, bar_association, practice_areas, agency,
             phone, office_phone, office_address, created_at, updated_at
        from v2.users where id = $1 and is_active = true`, [userId])
 }
@@ -65,6 +67,7 @@ export async function updateUser(db: pg.Client, userId: string, data: Record<str
   text('firmName', 'firm_name')
   text('position', 'position')
   text('barAssociation', 'bar_association')
+  text('agency', 'agency')
   text('phone', 'phone')
   text('officePhone', 'office_phone')
   text('officeAddress', 'office_address')

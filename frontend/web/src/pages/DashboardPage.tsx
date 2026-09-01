@@ -53,159 +53,41 @@ export default function DashboardPage() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 700 }}>
-        나의 성과
+      <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>통계</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        IEP 는 수사관을 <b>점수로 평가하지 않습니다</b> — 아래는 활동 요약입니다.
       </Typography>
 
-      {/* 점수 카드 */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="textSecondary" sx={{ mb: 1 }}>
-              현재 점수
-            </Typography>
-            <Typography variant="h3" sx={{ color: '#0066CC', fontWeight: 700 }}>
-              {score.currentScore}
-            </Typography>
-            <Typography variant="caption" color="textSecondary">
-              / 100
-            </Typography>
-          </Paper>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="body2" color="text.secondary">이번주 조사</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                {score.metrics?.meetingsThisWeek ?? 0}
+                <Typography component="span" variant="body2" color="text.secondary"> 건</Typography>
+              </Typography>
+            </CardContent>
+          </Card>
         </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="textSecondary" sx={{ mb: 1 }}>
-              주간 점수
-            </Typography>
-            <Typography variant="h3" sx={{ color: '#10B981', fontWeight: 700 }}>
-              {score.weeklyScore}
-            </Typography>
-            <Typography variant="caption" color="textSecondary">
-              이번주
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="textSecondary" sx={{ mb: 1 }}>
-              월간 점수
-            </Typography>
-            <Typography variant="h3" sx={{ color: '#F59E0B', fontWeight: 700 }}>
-              {score.monthlyScore}
-            </Typography>
-            <Typography variant="caption" color="textSecondary">
-              이번달
-            </Typography>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="textSecondary" sx={{ mb: 1 }}>
-              미팅 횟수
-            </Typography>
-            <Typography variant="h3" sx={{ color: '#8B5CF6', fontWeight: 700 }}>
-              {score.metrics.meetingsThisWeek}
-            </Typography>
-            <Typography variant="caption" color="textSecondary">
-              이번주
-            </Typography>
-          </Paper>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="body2" color="text.secondary">확인 항목 처리율</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                {Math.round((score.metrics?.actionCompletionRate ?? 0) * 100)}
+                <Typography component="span" variant="body2" color="text.secondary"> %</Typography>
+              </Typography>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 
-      {/* 역량 분석 */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-          역량 분석
+      <Paper variant="outlined" sx={{ p: 2.5, mt: 3, bgcolor: '#F8FAFC' }}>
+        <Typography variant="body2" color="text.secondary">
+          조사 종류별 분포·진술 분석 확인 항목 통계는 다음 단계에서 추가됩니다.
         </Typography>
-        <Stack spacing={2}>
-          {Object.entries(score.scoreComponents).map(([key, value]) => (
-            <Box key={key}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {key === 'customerUnderstanding'
-                    ? '고객 이해도'
-                    : key === 'problemSolving'
-                      ? '문제 해결력'
-                      : key === 'proposalPersuasion'
-                        ? '제안 설득력'
-                        : key === 'followUp'
-                          ? '후속 액션'
-                          : '팀 협업'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#0066CC', fontWeight: 600 }}>
-                  {value}점
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={value}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: '#E5E7EB',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 4,
-                    backgroundColor: '#0066CC',
-                  },
-                }}
-              />
-            </Box>
-          ))}
-        </Stack>
       </Paper>
-
-      {/* 랭킹 및 통계 */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              팀 내 순위
-            </Typography>
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography variant="h2" sx={{ color: '#0066CC', fontWeight: 700 }}>
-                {score.weeklyRank}위
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                전체 팀원 중
-              </Typography>
-            </Box>
-            <Chip
-              label={`주간 평균 점수: ${Math.round(score.weeklyScore / 4)}점`}
-              sx={{ width: '100%', height: 'auto', py: 1 }}
-            />
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              활동 통계
-            </Typography>
-            <Stack spacing={2}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="textSecondary">
-                  액션 완료율
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#10B981' }}>
-                  {Math.round(score.metrics.actionCompletionRate * 100)}%
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="textSecondary">
-                  고객 만족도
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#0066CC' }}>
-                  {score.metrics.customerSatisfaction.toFixed(1)}/10
-                </Typography>
-              </Box>
-            </Stack>
-          </Paper>
-        </Grid>
-      </Grid>
     </Container>
   );
 }

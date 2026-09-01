@@ -120,7 +120,7 @@ export default function DeadlineDashboardPage() {
           <>
             <Divider sx={{ my: 1.5 }} />
             <Typography variant="caption" color="text.secondary">
-              <b>확인 필요</b>는 상담에서 <b>AI 가 뽑은 추정 날짜</b>입니다.
+              <b>확인 필요</b>는 조사에서 <b>AI 가 뽑은 추정 날짜</b>입니다.
               근거를 보고 확정하기 전까지는 <b>날짜로 믿지 마십시오.</b>
             </Typography>
           </>

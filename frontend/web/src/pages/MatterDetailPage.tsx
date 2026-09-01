@@ -1,29 +1,29 @@
 // 사건 하나 (016~025)
 //
-// **한 화면에 모이는 것이 이 제품의 값이다** — 상담·기한·요건·시계열·증거가
+// **한 화면에 모이는 것이 이 제품의 값이다** — 조사·기한·요건·시계열·증거가
 // 흩어져 있으면 사건을 파악할 수 없다.
 //
 // ── 순서는 사건의 단계에 따라 바뀐다 (2026-08-26) ──
 //
-// 처음엔 「기한 → 요건 → 상담」 으로 고정해 뒀다. 기한이 맨 위인 이유는
+// 처음엔 「기한 → 요건 → 조사」 으로 고정해 뒀다. 기한이 맨 위인 이유는
 // **놓치면 되돌릴 수 없기 때문**이고, 그건 지금도 맞다.
 //
-// 그런데 **아직 상담이 없는 사건**에서는 그 순서가 거짓말을 한다 —
+// 그런데 **아직 조사가 없는 사건**에서는 그 순서가 거짓말을 한다 —
 // 기한은 비어 있고, 요건 넷은 전부 빨간 「없음」 으로 서 있다.
 // 문제처럼 보이지만 문제가 아니라 **아직 시작을 안 한 것**이다.
 //
-// 실제 흐름은 이렇다:  **상담 녹음 → 분석이 요건을 채움 → 사람이 고치고 더함.**
-// `legalPersist` 가 상담 분석 결과로 `legal_elements` 를 쓴다 — 상담이 요건의 상류다.
+// 실제 흐름은 이렇다:  **조사 녹음 → 분석이 요건을 채움 → 사람이 고치고 더함.**
+// `legalPersist` 가 조사 분석 결과로 `legal_elements` 를 쓴다 — 조사가 요건의 상류다.
 //
 // 그래서 —
-//   상담이 없으면:  **「사건 조사를 시작하십시오」 가 맨 위.** 무엇부터 할지 말해 준다
-//   상담이 있으면:  기한 → 상담 → 요건 → 시계열 → 증거.
+//   조사가 없으면:  **「사건 조사를 시작하십시오」 가 맨 위.** 무엇부터 할지 말해 준다
+//   조사가 있으면:  기한 → 조사 → 요건 → 시계열 → 증거.
 //                   기한이 다시 맨 위다. 그때부터는 놓치면 안 되는 것이 먼저다
 //
-// **기한을 조건 없이 내리지는 않았다.** 상담 전에 소멸시효를 먼저 넣어 두는 사건이 있다 —
+// **기한을 조건 없이 내리지는 않았다.** 조사 전에 소멸시효를 먼저 넣어 두는 사건이 있다 —
 // 그런 사건에서 기한이 아래로 밀리면 넣어 둔 의미가 없다.
 //
-// 상담을 요건 **위**로 올린 것도 같은 이유다: 요건은 상담에서 나온 결과이지 원인이 아니다.
+// 조사를 요건 **위**로 올린 것도 같은 이유다: 요건은 조사에서 나온 결과이지 원인이 아니다.
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -132,12 +132,12 @@ export default function MatterDetailPage() {
   if (!m) return <Container maxWidth="md" sx={{ py: 4 }}><Typography>불러오는 중…</Typography></Container>;
 
   const openDeadlines = (m.deadlines || []).filter((d: any) => d.status === 'open');
-  // **상담이 하나라도 있으면 조사가 시작된 사건이다.** 화면의 순서가 여기서 갈린다.
+  // **조사가 하나라도 있으면 조사가 시작된 사건이다.** 화면의 순서가 여기서 갈린다.
   const hasMeetings = (m.meetings || []).length > 0;
   /**
    * 아직 조사가 시작되지 않은 사건인가.
    *
-   * **기한이 있으면 기한이 먼저다.** 상담 전에 소멸시효를 먼저 넣어 두는 사건이 있고,
+   * **기한이 있으면 기한이 먼저다.** 조사 전에 소멸시효를 먼저 넣어 두는 사건이 있고,
    * 그런 사건에서 기한이 아래로 밀리면 넣어 둔 의미가 없다 —
    * 지난 기한 여섯 건을 깔고 앉은 채 「시작하십시오」 라고 말하면 안 된다.
    */
@@ -150,11 +150,11 @@ export default function MatterDetailPage() {
             사건 조사를 시작하십시오
           </Typography>
           <Typography variant="body2" color="text.secondary" mb={2}>
-            상담을 녹음하면 그 내용에서 <b>요건사실·시계열·증거</b>가 채워집니다.
+            조사를 녹음하면 그 내용에서 <b>요건사실·시계열·증거</b>가 채워집니다.
             채워진 것을 보고 고치거나 더하는 것이 다음 순서입니다.
           </Typography>
           <Button variant="contained" onClick={() => navigate(`/upload?matter=${m.id}`)}>
-            새 상담 녹음
+            새 조사 녹음
           </Button>
           <Typography variant="caption" color="text.secondary" display="block" mt={1.5}>
             이 사건이 이미 골라진 채로 녹음 화면이 열립니다.
@@ -200,14 +200,14 @@ export default function MatterDetailPage() {
       {/*
         ── 사건 조사의 시작 ──
 
-        **상담이 요건의 상류다.** `legalPersist` 가 상담 분석 결과로 `legal_elements` 를
+        **조사가 요건의 상류다.** `legalPersist` 가 조사 분석 결과로 `legal_elements` 를
         채운다 — 즉 녹음이 없으면 요건은 영원히 「없음」 이다.
 
-        그런데 상담이 아직 없는 사건에서 요건 넷이 전부 빨간 「없음」 으로 서 있으면
+        그런데 조사가 아직 없는 사건에서 요건 넷이 전부 빨간 「없음」 으로 서 있으면
         **문제처럼 읽힌다.** 문제가 아니라 아직 시작을 안 한 것이다.
-        그래서 상담이 하나도 없을 때는 **무엇부터 해야 하는지**를 맨 위에 둔다.
+        그래서 조사가 하나도 없을 때는 **무엇부터 해야 하는지**를 맨 위에 둔다.
 
-        상담이 생기면 이 블록은 사라지고 기한이 맨 위로 돌아간다 —
+        조사가 생기면 이 블록은 사라지고 기한이 맨 위로 돌아간다 —
         그때부터는 「놓치면 되돌릴 수 없는 것」 이 먼저다.
       */}
       {/* 기한이 없을 때만 맨 위다 — 있으면 기한이 먼저고 이 블록은 그 아래로 간다 */}
@@ -215,7 +215,7 @@ export default function MatterDetailPage() {
 
       {/* ── 기한 ──
           조사가 시작된 사건에서는 **이것이 맨 위다 — 놓치면 되돌릴 수 없다.**
-          아직 상담이 없는 사건에서만 위의 「시작」 블록에 자리를 내준다. */}
+          아직 조사가 없는 사건에서만 위의 「시작」 블록에 자리를 내준다. */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
           <Typography variant="subtitle2" fontWeight={700}>기한</Typography>
@@ -278,20 +278,20 @@ export default function MatterDetailPage() {
       {/* 기한이 있는 사건에서는 기한을 먼저 보여 주고 여기서 시작을 안내한다 */}
       {startsHere && openDeadlines.length > 0 && startCard}
 
-      {/* ── 상담 ── */}
+      {/* ── 조사 ── */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
           <Typography variant="subtitle2" fontWeight={700}>
-            상담 ({(m.meetings || []).length})
+            조사 ({(m.meetings || []).length})
           </Typography>
           {/* 이 사건이 이미 골라진 채로 녹음 화면이 열린다 — 고르는 것을 잊지 않게 */}
           <Button size="small" variant="outlined" onClick={() => navigate(`/upload?matter=${m.id}`)}>
-            새 상담 녹음
+            새 조사 녹음
           </Button>
         </Stack>
         {(m.meetings || []).length === 0 ? (
           <Typography variant="body2" color="text.secondary">
-            아직 상담이 없습니다. 위 「새 상담 녹음」으로 시작하면 여기 모입니다.
+            아직 조사가 없습니다. 위 「새 조사 녹음」으로 시작하면 여기 모입니다.
           </Typography>
         ) : (
           <Stack spacing={1}>
@@ -319,12 +319,12 @@ export default function MatterDetailPage() {
           <Typography variant="subtitle2" fontWeight={700}>요건사실</Typography>
           <Button size="small" variant="outlined" onClick={() => setElOpen(true)}>요건 추가</Button>
         </Stack>
-        {/* **상담이 없을 때 「없음」 은 문제가 아니다.** 아직 시작을 안 한 것이다 —
+        {/* **조사가 없을 때 「없음」 은 문제가 아니다.** 아직 시작을 안 한 것이다 —
             그렇게 말해 주지 않으면 빨간 칩 넷이 경보로 읽힌다. */}
         <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
           {m.cause || '청구원인 미정'}
           {!hasMeetings
-            ? ' · 상담을 녹음하면 여기가 채워집니다. 지금 직접 정해 두셔도 됩니다'
+            ? ' · 조사를 녹음하면 여기가 채워집니다. 지금 직접 정해 두셔도 됩니다'
             : ` · 아직 채워지지 않은 것 ${missing.length}개`}
           {m.cause ? '' : ' · 사건 정보에서 청구원인을 정하면 표준 요건이 깔립니다'}
         </Typography>
@@ -484,7 +484,7 @@ export default function MatterDetailPage() {
               helperText="근거를 적어 두면 나중에 다시 확인할 수 있습니다" />
             <Divider />
             <Typography variant="caption" color="text.secondary">
-              직접 넣은 기한은 <b>확정</b>으로 저장됩니다. AI 가 상담에서 뽑은 기한만 추정으로 남습니다.
+              직접 넣은 기한은 <b>확정</b>으로 저장됩니다. AI 가 조사에서 뽑은 기한만 추정으로 남습니다.
             </Typography>
           </Stack>
         </DialogContent>

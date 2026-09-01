@@ -21,7 +21,17 @@ import { apiClient } from '../services/api';
 const POSITIONS = ['순경', '경장', '경사', '경위', '경감', '경정', '수사관'];
 
 /** 담당 분야 — 통계·분류에 쓸 자리. 지금은 프로필에만 담는다. */
-const PRACTICE_AREAS = ['경제', '지능', '사이버', '강력', '여성·청소년', '교통', '마약', '기타'];
+// 소속 기관 — 계급은 두 기관이 같지만 담당 분야가 다르다.
+const AGENCIES = [
+  { value: 'police', label: '경찰' },
+  { value: 'coast_guard', label: '해양경찰' },
+];
+const AREAS_BY_AGENCY: Record<string, string[]> = {
+  police: ['경제', '지능', '사이버', '강력', '여성·청소년', '교통', '마약', '기타'],
+  coast_guard: ['해양오염', '해상안전', '해양범죄', '밀수·밀입국', '수산', '구조·구난', '기타'],
+};
+// 기관 미선택이면 경찰 분야를 기본으로 보여 준다.
+const areasFor = (agency: string) => AREAS_BY_AGENCY[agency] || AREAS_BY_AGENCY.police;
 
 const MIN_MS = 2000;
 const MAX_MS = 10000;
@@ -34,7 +44,7 @@ export default function ProfilePage() {
   // 수사관 신원. **저장을 누를 때까지 서버에 안 보낸다** — 타이핑마다 보내면
   // 절반쯤 적힌 값이 그 사이 문서에 찍힌다.
   const [form, setForm] = useState({
-    name: '', barNo: '', firmName: '', position: '', barAssociation: '',
+    name: '', barNo: '', firmName: '', position: '', barAssociation: '', agency: '',
     phone: '', officePhone: '', officeAddress: '',
   });
   const [areas, setAreas] = useState<string[]>([]);
@@ -58,7 +68,7 @@ export default function ProfilePage() {
         const u: any = res.data || {};
         setForm({
           name: u.name || '', barNo: u.barNo || '', firmName: u.firmName || '',
-          position: u.position || '', barAssociation: u.barAssociation || '',
+          position: u.position || '', barAssociation: u.barAssociation || '', agency: u.agency || '',
           phone: u.phone || '', officePhone: u.officePhone || '',
           officeAddress: u.officeAddress || '',
         });
@@ -165,6 +175,12 @@ export default function ProfilePage() {
         {saved && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSaved('')}>{saved}</Alert>}
 
         <Stack spacing={2.5}>
+          <TextField select label="소속 기관" fullWidth value={form.agency}
+            onChange={(e) => setForm({ ...form, agency: e.target.value })}
+            helperText="계급은 같고 담당 분야가 달라집니다">
+            <MenuItem value="">선택 안 함</MenuItem>
+            {AGENCIES.map((a) => <MenuItem key={a.value} value={a.value}>{a.label}</MenuItem>)}
+          </TextField>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField label="이름" fullWidth value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -199,7 +215,7 @@ export default function ProfilePage() {
               통계·분류에 쓸 예정입니다.
             </Typography>
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-              {PRACTICE_AREAS.map((a) => (
+              {areasFor(form.agency).map((a) => (
                 <Chip key={a} label={a} size="small"
                   color={areas.includes(a) ? 'primary' : 'default'}
                   variant={areas.includes(a) ? 'filled' : 'outlined'}

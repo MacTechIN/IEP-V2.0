@@ -22,7 +22,7 @@ function fmt(sec: number): string {
 }
 
 /**
- * **서버에는 올라와 있는데 어느 미팅에도 붙지 않은 녹음(draft)** 을 보는 관리자 화면.
+ * **서버에는 올라와 있는데 어느 조사에도 붙지 않은 녹음(draft)** 을 보는 관리자 화면.
  *
  * 구간 녹음(2.10.0)의 안전망이 남긴 것들이다 — 회의 도중 화면이 죽어도 앞 구간들은
  * 서버에 남는다. 2.17 까지는 이 목록이 녹음 화면 맨 위에 그대로 떴는데, 테스트가
@@ -69,9 +69,9 @@ export default function AdminRecordingsPage() {
         <Button size="small" onClick={load} disabled={loading}>새로 고침</Button>
       </Stack>
       <Typography variant="body2" color="text.secondary" mb={3}>
-        서버에는 올라와 있지만 아직 어느 미팅에도 붙지 않은 녹음입니다.
+        서버에는 올라와 있지만 아직 어느 조사에도 붙지 않은 녹음입니다.
         이 계정 것만 보입니다. 여기서는 확인과 삭제만 합니다 —
-        미팅에 붙이는 기능은 없습니다 (2.17 까지는 녹음 화면의 "이 미팅에 넣기" 가 그 역할이었다).
+        조사에 붙이는 기능은 없습니다 (2.17 까지는 녹음 화면의 "이 조사에 넣기" 가 그 역할이었다).
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

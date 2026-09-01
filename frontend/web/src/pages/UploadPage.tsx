@@ -107,7 +107,7 @@ export default function UploadPage() {
 
   /**
    * 마지막에 고른 종류를 기억한다. **다만 `legal` 은 기억하지 않는다** —
-   * 법률 상담을 한 번 하고 나면 그다음 일반 조사까지 법률로 분석되는 것이
+   * 법률 조사를 한 번 하고 나면 그다음 일반 조사까지 법률로 분석되는 것이
    * 그 반대보다 나쁘다. 위험한 쪽은 매번 고르게 한다.
    */
   const [meetingKind, setMeetingKind] = useState<MeetingKind>(() => {
@@ -936,7 +936,7 @@ export default function UploadPage() {
           */}
           <Box sx={{ mb: 2.5 }}>
             <Typography variant="caption" color="text.secondary" display="block" mb={0.75}>
-              이 조사은 어떤 자리입니까
+              이 조사는 어떤 자리입니까
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {MEETING_KINDS.map((k) => (
@@ -1063,7 +1063,7 @@ export default function UploadPage() {
             ── 녹음 버튼 **바로 아래** ── (2026-08-26 배치 변경)
 
             전에는 이 둘이 녹음 카드 **밖**, 녹음 목록 다음에 있었다.
-            녹음 목록은 **10분마다 한 줄씩 늘어난다** — 한 시간짜리 조사이면 여섯 줄이다.
+            녹음 목록은 **10분마다 한 줄씩 늘어난다** — 한 시간짜리 조사가면 여섯 줄이다.
             그만큼 코칭과 자막이 아래로 밀려 **정작 조사 중에 화면 밖으로 나갔다.**
 
             버튼 바로 아래로 올리면 목록이 아무리 길어져도 이 둘의 자리는 그대로다.
@@ -1355,7 +1355,7 @@ export default function UploadPage() {
         <DialogContent>
           <DialogContentText component="div">
             <Typography variant="body2" mb={2}>
-              이 조사은 녹음되고 AI가 분석합니다. 아래 내용을 참석자에게 알리고 동의를 받아야 합니다.
+              이 조사는 녹음되고 AI가 분석합니다. 아래 내용을 참석자에게 알리고 동의를 받아야 합니다.
             </Typography>
 
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>

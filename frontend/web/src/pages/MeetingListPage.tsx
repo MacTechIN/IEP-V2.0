@@ -74,7 +74,7 @@ export const MeetingListPage: React.FC = () => {
   };
 
   const handleDelete = async (meetingId: string) => {
-    if (window.confirm('이 조사을 삭제하시겠습니까?')) {
+    if (window.confirm('이 조사를 삭제하시겠습니까?')) {
       try {
         await apiClient.deleteMeeting(meetingId);
         await loadMeetings();
@@ -98,7 +98,7 @@ export const MeetingListPage: React.FC = () => {
           <TableHead sx={{ backgroundColor: '#F3F4F6' }}>
             <TableRow>
               <TableCell>조사명</TableCell>
-              {/* **종류가 안 보이면 목록에서 법률 상담을 구분할 수 없다.**
+              {/* **종류가 안 보이면 목록에서 법률 조사를 구분할 수 없다.**
                   2026-08-26 이전에는 목록 API 가 kind 를 안 줘서 전부 「일반」 이었다. */}
               <TableCell>종류</TableCell>
               <TableCell>대상자</TableCell>
@@ -128,10 +128,11 @@ export const MeetingListPage: React.FC = () => {
                 </TableCell>
                 <TableCell>
                   <Chip size="small" variant="outlined"
-                    color={meeting.kind === 'legal' ? 'secondary'
-                         : meeting.kind === 'business' ? 'primary' : 'default'}
-                    label={meeting.kind === 'legal' ? '상담 (법률)'
-                         : meeting.kind === 'business' ? '수임 상담' : '일반'} />
+                    color={meeting.kind === 'interrogation' ? 'error'
+                         : meeting.kind === 'victim' ? 'secondary'
+                         : meeting.kind === 'witness' ? 'primary' : 'default'}
+                    label={{ interrogation: '피의자 신문', witness: '참고인 조사', victim: '피해자 조사',
+                             interview: '면담', meeting: '회의' }[meeting.kind as string] || '일반'} />
                 </TableCell>
                 <TableCell>{meeting.customerName || '-'}</TableCell>
                 <TableCell>

@@ -35,7 +35,7 @@ export default function MatterListPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: '', cause: '', matterType: '', fileNo: '', notes: '' });
   const [adverseName, setAdverseName] = useState('');
-  // **의뢰인(원고).** 서버는 처음부터 `clientId` 를 받고 있었는데 이 폼이 안 보냈다 —
+  // **대상자(원고).** 서버는 처음부터 `clientId` 를 받고 있었는데 이 폼이 안 보냈다 —
   // 그래서 소장을 만들 때 「원고가 연결되어 있지 않습니다」 로 막히고, 붙일 칸도 없었다.
   const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [clientId, setClientId] = useState('');
@@ -85,7 +85,7 @@ export default function MatterListPage() {
     if (!form.title.trim()) return;
     setSaving(true);
     try {
-      // 새 이름을 적었으면 의뢰인을 먼저 만든다.
+      // 새 이름을 적었으면 대상자를 먼저 만든다.
       let cid = clientId;
       if (!cid && newClient.trim()) {
         const c = await apiClient.createCustomer({ companyName: newClient.trim() }).catch(() => null);
@@ -131,7 +131,7 @@ export default function MatterListPage() {
         </Stack>
       </Stack>
       <Typography variant="body2" color="text.secondary" mb={3}>
-        상담·기한·요건·증거가 사건 하나로 모입니다.
+        조사·기한·요건·증거가 사건 하나로 모입니다.
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
