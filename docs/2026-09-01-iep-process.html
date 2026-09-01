@@ -136,12 +136,12 @@
           <text x="224" y="63" text-anchor="middle" font-size="10.5" fill="var(--muted)">실시간 코칭</text>
         </g>
         <!-- 실시간 전사 분기 (S5 · 미배포) -->
-        <line x1="224" y1="76" x2="224" y2="104" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ar)"/>
-        <rect x="150" y="106" width="148" height="46" rx="8" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <line x1="224" y1="76" x2="224" y2="104" stroke="var(--ok)" stroke-width="1.5" marker-end="url(#ar)"/>
+        <rect x="150" y="106" width="148" height="46" rx="8" fill="none" stroke="var(--ok)" stroke-width="1.5"/>
         <text x="224" y="126" text-anchor="middle" font-size="12" font-weight="600" fill="var(--muted)">실시간 전사 (자막)</text>
         <text x="224" y="141" text-anchor="middle" font-size="9.5" fill="var(--muted)">Cloud Run · Deepgram/Google</text>
-        <rect x="150" y="160" width="148" height="18" rx="9" fill="var(--una-bg)"/>
-        <text x="224" y="172.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--una)">S5 · 미배포 (자막 꺼짐)</text>
+        <rect x="150" y="160" width="148" height="18" rx="9" fill="var(--ok-bg)"/>
+        <text x="224" y="172.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--ok)">S5 · 배포됨 (2026-09-02)</text>
         <line x1="128" y1="50" x2="160" y2="50" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
         <line x1="284" y1="50" x2="316" y2="50" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
         <text x="300" y="42" text-anchor="middle" font-size="9.5" fill="var(--muted)">R2</text>
@@ -244,12 +244,12 @@
     <div class="layer"><span class="lv">L5 화면</span><span class="d">React · 조사 상세 <b>진술 분석 탭</b> · 서면 만들기 · 프로필(경찰/해양경찰)</span></div>
   </div>
 
-  <h2><span class="n">S5</span>실시간 전사 — 왜 꺼져 있나</h2>
-  <p class="lede">녹음 중 <b>말하는 대로 화면에 자막</b>이 뜨는 기능. 지금은 <span class="pill p-una">미배포</span> 상태다.</p>
+  <h2><span class="n">S5</span>실시간 전사 — 배포됨</h2>
+  <p class="lede">녹음 중 <b>말하는 대로 화면에 자막</b>이 뜨는 기능. <span class="pill p-unv">2026-09-02 배포</span> — Cloud Run <code style="font-family:var(--mono);font-size:.85em">iep-stream</code>(Deepgram 주 + Google 백업).</p>
   <div class="cards">
     <div class="card"><p class="k">있는 것</p><h3>프론트 코드 완비</h3><p>브라우저가 오디오를 16kHz PCM 으로 변환해 WebSocket 으로 보내는 코드(<code style="font-family:var(--mono);font-size:.85em">liveTranscript.ts</code>)와 자막 UI 가 모두 있다.</p></div>
-    <div class="card"><p class="k">없는 것</p><h3>스트림 서버 미배포</h3><p><code style="font-family:var(--mono);font-size:.85em">stream-service</code>(Cloud Run WebSocket 게이트웨이) 소스는 있으나 <b>배포가 안 됐다.</b> Deepgram 주 · Google STT 백업.</p></div>
-    <div class="card"><p class="k">그래서</p><h3>자동으로 꺼짐</h3><p><code style="font-family:var(--mono);font-size:.85em">VITE_STREAM_URL</code> 이 비어 있어 자막 스위치 자체가 숨는다 — 「켤 수 없는 스위치는 안 보인다」.</p></div>
+    <div class="card"><p class="k">배포됨</p><h3>iep-stream 가동</h3><p><code style="font-family:var(--mono);font-size:.85em">iep-stream</code>(Cloud Run · asia-northeast3)에서 WebSocket 게이트웨이 가동. Deepgram nova-2 주 · Google STT 백업. <code style="font-family:var(--mono);font-size:.85em">/health</code> ok.</p></div>
+    <div class="card"><p class="k">이제</p><h3>자막 스위치 켜짐</h3><p><code style="font-family:var(--mono);font-size:.85em">VITE_STREAM_URL</code> = <code style="font-family:var(--mono);font-size:.85em">wss://iep-stream…run.app</code>. 녹음 화면에서 실시간 자막을 켤 수 있다.</p></div>
   </div>
   <p class="lede" style="margin-top:.4rem"><b>켜려면(S5):</b> ① <code style="font-family:var(--mono);font-size:.85em">stream-service</code> 를 Cloud Run 에 배포(시크릿: worker 와 같은 <code style="font-family:var(--mono);font-size:.85em">JWT_SECRET</code>, Deepgram 키 또는 Google 전용) → ② 나온 <code style="font-family:var(--mono);font-size:.85em">wss://…run.app</code> 을 <code style="font-family:var(--mono);font-size:.85em">VITE_STREAM_URL</code> 로 → ③ 웹 재빌드·배포. 그러면 자막 스위치가 나타난다. <b>실시간 코칭(25초)은 이와 별개로 이미 동작한다.</b></p>
 
