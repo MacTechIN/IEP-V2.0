@@ -61,7 +61,7 @@ export default function HomePage() {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ fontWeight: 700 }}>
-        안녕하세요, {user?.name || ''}님!
+        안녕하세요, {user?.name || ''}{user?.position ? ` ${user.position}` : ''}님!
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{today}</Typography>
 

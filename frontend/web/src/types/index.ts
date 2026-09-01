@@ -7,6 +7,8 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  /** 계급/직위 (수사관 프로필). 인사말·조서 작성자 표시에 쓴다. */
+  position?: string | null;
   department?: string;
   monthlyTargetKrw?: number;
   profileImageUrl?: string;
