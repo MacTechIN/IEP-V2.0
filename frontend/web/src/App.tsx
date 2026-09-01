@@ -91,8 +91,8 @@ function TopBar() {
   const navItems = [
     { to: '/', label: '홈' },
     { to: '/matters', label: '수사사건' },
-    { to: '/deadlines', label: '기한', badge: urgent },
     { to: '/meetings', label: '조사' },
+    { to: '/deadlines', label: '기한', badge: urgent },
     { to: '/performance', label: '통계' },
     { to: '/profile', label: '내 프로필' },
     // **저장된 HTML 문서다** (`public/guide.html`) — SPA 라우트가 아니다.
