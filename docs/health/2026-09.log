@@ -1,0 +1,5 @@
+2026-09-01 07:38  DOWN  web=100ms api=116ms stream=FAIL auth=4802ms db=1667ms transcribe=ok analysis=ok
+  실패: stream(Failed to parse URL from /health)
+  느림: auth 4802ms
+  web: index-DKZEDWwi.js
+  analysis: 24h 미팅 1 · 실패 0
