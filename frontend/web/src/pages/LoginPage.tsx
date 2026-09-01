@@ -28,7 +28,10 @@ export default function LoginPage() {
       const res = await apiClient.login(email, password);
       if (res.success) {
         if (res.data) dispatch(loginSuccess(res.data));
-        navigate('/');
+        // **하드 이동.** SPA 의 navigate('/') 는 일부 모바일/인앱 브라우저에서
+        // 라우트가 안 붙어 「로그인만 되고 화면이 안 바뀌는」 일이 있었다.
+        // 토큰은 이미 localStorage 에 저장됐으므로, 새로 떠도 바로 홈으로 들어간다.
+        window.location.assign('/');
       } else {
         setError('로그인에 실패했습니다. 아이디/비밀번호를 확인하세요.');
       }

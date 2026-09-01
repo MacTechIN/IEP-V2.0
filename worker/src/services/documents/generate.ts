@@ -77,10 +77,12 @@ export async function gather(
     ])
     const mr = mm.rows[0]
     if (mr) {
+      // **날짜는 ISO 로 만든다.** pg 가 timestamptz 를 Date 객체로 주면
+      // String() 은 「Tue Sep 01 2026…」 이 되어 slice(0,10)=「Tue Sep 01」 이 된다.
+      const rawDate = mr.start_time ?? mr.created_at
       meeting = {
         id: mr.id, title: mr.title, kind: mr.kind,
-        occurredAt: (mr.start_time ?? mr.created_at)
-          ? String(mr.start_time ?? mr.created_at).slice(0, 10) : null,
+        occurredAt: rawDate ? new Date(rawDate as string).toISOString().slice(0, 10) : null,
         notes: mr.notes ?? null,
       }
     }
