@@ -53,10 +53,10 @@ export default function LoginPage() {
       <Card sx={{ width: '100%', maxWidth: 400, boxShadow: 3 }}>
         <CardContent sx={{ p: 4 }}>
           <Typography variant="h5" fontWeight={700} textAlign="center" gutterBottom>
-            LEP
+            IEP
           </Typography>
           <Typography variant="body2" color="text.secondary" textAlign="center" mb={3}>
-            변호사를 위한 상담 분석 플랫폼
+            수사관을 위한 조사 분석 플랫폼
           </Typography>
 
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

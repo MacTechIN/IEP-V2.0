@@ -501,15 +501,21 @@ export class AnalysisWorkflow extends WorkflowEntrypoint<Env, AnalysisParams> {
        * 보였으며, 제품의 시장 진입에 대한 열정을 나타냈습니다」 였다.
        * **전사문에 그런 말이 없다** — 영업 스키마(관심사·우려·딜 신호)를 채우려고 지어낸 것이다.
        */
-      const isLegal = await withDb(env, async (db) => {
-        const r = await db.query<{ kind: string }>(
-          'select kind from v2.meetings where id = $1', [meetingId])
-        return r.rows[0]?.kind === 'legal'
-      })
+      /**
+       * **IEP 는 영업 분석기를 절대 부르지 않는다** (2026-09-01, §0).
+       *
+       * LEP 은 `kind='legal'` 일 때만 영업 경로를 막았다. IEP 의 모든 조사(신문·참고인·
+       * 피해자·면담·회의)는 영업이 아니므로 **항상 막는다.** 영업 스키마(관심사·우려·
+       * 딜 신호)를 채우려고 모델이 없는 말을 지어내는 것을 원천 차단한다.
+       *
+       * 「진술 분석」(모순·미확인·태도변화)은 S4 에서 별도 서비스로 붙는다.
+       * 그전까지는 미팅 노트(중립 요약)만 남는다 — 그게 지금의 안전한 상태다.
+       */
+      const skipSalesAnalysis = true
 
       // ── 기본 분석 (대시보드 점수) — **영업 상담에만**
       await step.do('기본 분석', { retries: { limit: 2, delay: '10 seconds' } }, async () => {
-        if (isLegal) {
+        if (skipSalesAnalysis) {
           // 법률 상담은 아래 「법률 분해」 가 요약까지 만든다. 점수·딜 신호는 만들지 않는다 —
           // 법률 상담을 딜 강도로 채점하는 것은 이 제품이 할 일이 아니다.
           logLine('info', 'analysis.skip_sales', { mid: meetingId, at: 'basic' })
@@ -597,7 +603,7 @@ export class AnalysisWorkflow extends WorkflowEntrypoint<Env, AnalysisParams> {
          *
          * 호출이 넷에서 하나로 준다. **요금도 그만큼 준다.**
          */
-        const [report, psych, scorecard, note] = isLegal
+        const [report, psych, scorecard, note] = skipSalesAnalysis
           ? [null, null, null,
              await AI.generateMeetingNote(env,
                { id: meeting.id, title: meeting.title, notes: meeting.notes }, stt.text)]
@@ -608,7 +614,7 @@ export class AnalysisWorkflow extends WorkflowEntrypoint<Env, AnalysisParams> {
           // 리뷰용 노트. **녹취 전체를 본다** — 다른 셋과 달리 자르지 않고 구간별로 나눠 요약한다.
           AI.generateMeetingNote(env, { id: meeting.id, title: meeting.title, notes: meeting.notes }, stt.text),
         ])
-        if (isLegal) logLine('info', 'analysis.skip_sales', { mid: meetingId, at: 'report' })
+        if (skipSalesAnalysis) logLine('info', 'analysis.skip_sales', { mid: meetingId, at: 'report' })
         logLine('info', 'analysis.note', {
           mid: meetingId, chars: stt.text.length,
           topics: note?.topics.length ?? 0, decisions: note?.decisions.length ?? 0,

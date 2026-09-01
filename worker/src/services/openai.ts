@@ -349,17 +349,15 @@ export async function transcribeAudio(
 // ───────────────────────────── 화자 역할
 
 /**
- * 가장 많이 말한 화자를 변호사로 본다. LLM 실패 시의 폴백.
+ * 판정 실패 시의 폴백. **IEP 는 말수로 역할을 정하지 않는다** (§6-D).
  *
- * **LEP 은 어떤 미팅이든 「변호사 ↔ 의뢰인」이다.** 수임 상담(BD)도 잠재 의뢰인을
- * 만나는 자리이지 영업 상담이 아니다. SEP 의 「영업대표/고객」을 그대로 두면
- * 변호사가 자기 녹취에서 자신을 「영업대표」로 보게 된다.
+ * LEP 은 「말 많은 쪽 = 변호사」로 폴백했다. 수사에서는 이게 위험하다 —
+ * 대상자가 길게 진술하고 수사관이 짧게 물을 수도, 그 반대일 수도 있다.
+ * **틀린 호칭보다 빈 호칭이 낫다.** 그래서 폴백은 아무도 정하지 않고 전부 「미상」으로
+ * 둔다. 사람이 화면에서 지정한다. 미상이 많으면 분석 게이트가 WARN 으로 알린다.
  */
-function fallbackRoles(segments: DiarizedSegment[], speakers: string[]): Record<string, string> {
-  const counts: Record<string, number> = {}
-  for (const s of segments) counts[s.speaker] = (counts[s.speaker] || 0) + s.text.length
-  const rep = speakers.reduce((a, b) => ((counts[a] || 0) >= (counts[b] || 0) ? a : b), speakers[0])
-  return Object.fromEntries(speakers.map((sp) => [sp, sp === rep ? '변호사' : '의뢰인']))
+function fallbackRoles(_segments: DiarizedSegment[], speakers: string[]): Record<string, string> {
+  return Object.fromEntries(speakers.map((sp) => [sp, `화자 ${sp}`]))
 }
 
 /**
@@ -376,7 +374,8 @@ export async function mapSpeakerRoles(
   env: Env, segments: DiarizedSegment[],
 ): Promise<Record<string, string>> {
   const all = Array.from(new Set(segments.map((s) => s.speaker)))
-  if (all.length <= 1) return { [all[0] ?? 'A']: '변호사' }
+  // 화자 1명이어도 그를 수사관/대상자로 단정하지 않는다 — 사람이 지정한다 (§6-D).
+  if (all.length <= 1) return { [all[0] ?? 'A']: `화자 ${all[0] ?? 'A'}` }
   if (!env.OPENAI_API_KEY) return fallbackRoles(segments, all)
 
   /**
@@ -417,11 +416,13 @@ export async function mapSpeakerRoles(
     const parsed = await chat(env, {
       messages: [
         { role: 'system', content:
-          '번호별 발화 샘플을 보고 각 번호가 "변호사"인지 "의뢰인"인지 판정한다. '
-          + '법률 상담·수임 상담 어느 쪽이든 상담을 이끄는 쪽이 변호사다. '
-          + '**받은 번호를 하나도 빠뜨리지 않는다.** 애매하면 더 그럴듯한 쪽을 고른다. '
+          '번호별 발화 샘플을 보고 각 번호가 "수사관"인지 "대상자"인지 판정한다. '
+          + '질문하고 조사를 이끄는 쪽이 수사관, 답하고 진술하는 쪽이 대상자다. '
+          + '**말이 많고 적음으로 정하지 않는다** — 발화의 내용(묻는가/답하는가)으로 정한다. '
+          + '**확신이 서지 않는 번호는 "미상"으로 둔다.** 억지로 고르지 않는다 — '
+          + '틀린 호칭은 조사 전체를 틀리게 만든다. '
           + '이름은 판정하지 않는다. 역할만 정한다. '
-          + 'JSON만 출력: {"1":"변호사","2":"의뢰인",…}' },
+          + 'JSON만 출력: {"1":"수사관","2":"대상자","3":"미상",…}' },
         { role: 'user', content: samples },
       ],
       temperature: 0,
@@ -432,7 +433,8 @@ export async function mapSpeakerRoles(
     const got = new Map<string, string>()
     speakers.forEach((sp, i) => {
       const v = p[String(i + 1)] ?? p[`화자 ${i + 1}`] ?? p[`${i + 1}번`]
-      if (v === '변호사' || v === '의뢰인') got.set(sp, v)
+      // 수사관·대상자만 확정으로 받는다. 미상·그 외는 확정하지 않는다 (§6-D).
+      if (v === '수사관' || v === '대상자') got.set(sp, v)
     })
     logLine('info', 'roles.mapped', {
       asked: speakers.length, got: got.size, total: all.length,
@@ -455,7 +457,7 @@ export async function generateReport(
 ) {
   if (!env.OPENAI_API_KEY || !transcription) return null
   const ctx = previousContext ? `\n[이전 미팅 맥락]\n${previousContext}\n` : ''
-  const notes = meeting.notes ? `\n[영업자 사전 메모]\n${meeting.notes}\n` : ''
+  const notes = meeting.notes ? `\n[수사관 사전 메모]\n${meeting.notes}\n` : ''
   const p = await chat(env, {
     messages: [
       { role: 'system', content:
@@ -766,7 +768,7 @@ export async function generateMeetingNote(
   env: Env, meeting: Meeting, transcription: string,
 ): Promise<MeetingNote | null> {
   if (!env.OPENAI_API_KEY || !transcription.trim()) return null
-  const notes = meeting.notes ? `\n[영업자 사전 메모]\n${meeting.notes}\n` : ''
+  const notes = meeting.notes ? `\n[수사관 사전 메모]\n${meeting.notes}\n` : ''
 
   const one = async (text: string, part?: string) => asNote(await chat(env, {
     messages: [

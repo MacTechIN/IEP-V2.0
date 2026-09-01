@@ -90,10 +90,10 @@ function TopBar() {
   };
   const navItems = [
     { to: '/', label: '홈' },
-    { to: '/matters', label: '사건' },
+    { to: '/matters', label: '수사사건' },
     { to: '/deadlines', label: '기한', badge: urgent },
-    { to: '/meetings', label: '미팅' },
-    { to: '/performance', label: '성과' },
+    { to: '/meetings', label: '조사' },
+    { to: '/performance', label: '통계' },
     { to: '/profile', label: '내 프로필' },
     // **저장된 HTML 문서다** (`public/guide.html`) — SPA 라우트가 아니다.
     // 인쇄해서 나눠 줄 수 있어야 해서 문서로 두었다. `external` 이 그것을 표시한다.

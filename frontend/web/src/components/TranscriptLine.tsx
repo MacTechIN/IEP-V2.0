@@ -77,10 +77,10 @@ export default function TranscriptLine({ seg, editNo, onSave, onRevert, onHighli
   const [sel, setSel] = useState<Highlight | null>(null);
   const bodyRef = useRef<HTMLSpanElement | null>(null);
 
-  // 변호사 쪽 말풍선. **옛 라벨(영업대표)도 계속 맞아야 한다** —
-  // 화자 역할을 바꾸기 전에 분석된 녹취가 이미 저장돼 있다.
+  // 수사관 쪽 말풍선. 호칭은 「수사관」이 기준이다 (§6-D).
+  // 미상(`화자 …`)은 어느 쪽으로도 정렬하지 않는다 — 사람이 지정 전까지 중립.
   const label = seg.speakerLabel || '';
-  const isRep = label.includes('변호사') || label.includes('영업');
+  const isRep = label.includes('수사관');
   const edited = !!seg.editedAt;
   const text = seg.content || '';
   const marks = useMemo(() => mergeHighlights(seg.highlights || []), [seg.highlights]);
