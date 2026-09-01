@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SEP v2.0 실시간 자막이 마이크에서 화면까지 지나는 경로와, 그 결과가 저장되지 않는 이유.">
+<title>SEP v2 자막 파이프라인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+
+<style>
+  :root {
+    --paper:    #F5F7F6;
+    --surface:  #FFFFFF;
+    --sunk:     #ECF0EF;
+    --ink:      #0E1A1E;
+    --muted:    #5D6E72;
+    --hair:     #CBD6D6;
+    --live:     #0E7C7B;
+    --live-bg:  #E2F0EF;
+    --saved:    #8B5A17;
+    --saved-bg: #F4EBDC;
+    --warn:     #AF4227;
+    --warn-bg:  #F7E7E2;
+    --measure: 74ch;
+    --wide: 1120px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:    #0C1416;
+      --surface:  #14201F;
+      --sunk:     #101A1B;
+      --ink:      #E4EDEE;
+      --muted:    #93A6A9;
+      --hair:     #2A3A3B;
+      --live:     #4CC3BE;
+      --live-bg:  #102A29;
+      --saved:    #D9A85C;
+      --saved-bg: #2A2114;
+      --warn:     #E8836C;
+      --warn-bg:  #2E1A15;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:    #0C1416;
+    --surface:  #14201F;
+    --sunk:     #101A1B;
+    --ink:      #E4EDEE;
+    --muted:    #93A6A9;
+    --hair:     #2A3A3B;
+    --live:     #4CC3BE;
+    --live-bg:  #102A29;
+    --saved:    #D9A85C;
+    --saved-bg: #2A2114;
+    --warn:     #E8836C;
+    --warn-bg:  #2E1A15;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-size: 16px;
+    line-height: 1.72;
+    margin: 0;
+    padding: 0 24px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--wide); margin: 0 auto; }
+  .col  { max-width: var(--measure); }
+
+  header { padding: 72px 0 40px; border-bottom: 1px solid var(--hair); margin-bottom: 48px; }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 18px;
+  }
+  h1 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-weight: 400; font-size: clamp(38px, 6vw, 60px);
+    line-height: 1.1; letter-spacing: -.01em;
+    text-wrap: balance; margin: 0 0 22px;
+  }
+  .thesis { font-size: 18px; color: var(--muted); margin: 0; max-width: 62ch; }
+  .thesis strong { color: var(--ink); font-weight: 600; }
+
+  section { margin: 0 0 64px; }
+  h2 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-weight: 400; font-size: 30px; line-height: 1.2;
+    margin: 0 0 6px; text-wrap: balance;
+  }
+  .sub { color: var(--muted); font-size: 15px; margin: 0 0 28px; max-width: 66ch; }
+  p { margin: 0 0 16px; }
+  .col p { max-width: var(--measure); }
+  em { font-style: normal; box-shadow: inset 0 -.42em 0 var(--live-bg); }
+
+  figure { margin: 0 0 12px; }
+  .scroller {
+    overflow-x: auto; padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--hair); border-radius: 3px;
+  }
+  .scroller svg { display: block; min-width: 700px; width: 100%; height: auto; }
+  figcaption {
+    font-size: 14px; color: var(--muted); margin-top: 14px;
+    max-width: 72ch; line-height: 1.65;
+  }
+  figcaption strong { color: var(--ink); font-weight: 600; }
+
+  .box   { fill: var(--sunk); stroke: var(--hair); stroke-width: 1; }
+  .box-l { fill: var(--live-bg);  stroke: var(--live);  stroke-width: 1.25; }
+  .box-s { fill: var(--saved-bg); stroke: var(--saved); stroke-width: 1.25; }
+  .box-w { fill: var(--warn-bg);  stroke: var(--warn);  stroke-width: 1.25; }
+  .t     { fill: var(--ink); font-family: 'IBM Plex Sans KR', sans-serif; font-size: 12.5px; }
+  .t-s   { fill: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; }
+  .t-lane{ font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; letter-spacing: .1em; }
+  .lane-l { fill: var(--live); }
+  .lane-s { fill: var(--saved); }
+  .ln    { stroke: var(--muted); stroke-width: 1.25; fill: none; }
+  .ln-l  { stroke: var(--live);  stroke-width: 1.5; fill: none; }
+  .ln-s  { stroke: var(--saved); stroke-width: 1.5; fill: none; }
+  .ln-w  { stroke: var(--warn);  stroke-width: 1.5; fill: none; }
+  .dash  { stroke-dasharray: 5 4; }
+  .fill-l { fill: var(--live); }
+  .fill-s { fill: var(--saved); }
+  .fill-w { fill: var(--warn); }
+  .fill-m { fill: var(--muted); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--hair); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  thead th {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    font-weight: 500; background: var(--sunk);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  code {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: .89em; background: var(--sunk); color: var(--ink);
+    padding: 1px 5px; border-radius: 2px;
+  }
+
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 0; display: grid; gap: 0; }
+  ol.steps li {
+    counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 18px;
+    padding: 15px 0; border-top: 1px solid var(--hair); align-items: baseline;
+  }
+  ol.steps li::before {
+    content: counter(s, decimal-leading-zero);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--live); font-variant-numeric: tabular-nums;
+  }
+  ol.steps b { grid-column: 2; font-weight: 600; }
+  ol.steps span { grid-column: 2; color: var(--muted); font-size: 14.5px; margin-top: 2px; }
+
+  .note {
+    border-left: 3px solid var(--warn); background: var(--warn-bg);
+    padding: 18px 22px; border-radius: 0 3px 3px 0; margin: 0 0 20px;
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note b { color: var(--ink); font-weight: 600; }
+
+  footer {
+    border-top: 1px solid var(--hair); padding-top: 24px; margin-top: 20px;
+    font-size: 12.5px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.9;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">SEP v2.0 · 2026-08-21 기준</p>
+  <h1>실시간 자막은 어디로 흐르고<br>어디서 끝나는가</h1>
+  <p class="thesis">
+    마이크 하나에서 두 갈래가 나간다. 한쪽은 화면에 자막을 띄우고 <strong>사라지고</strong>,
+    다른 쪽은 파일로 저장돼 <strong>미팅노트가 된다</strong>. 두 경로는 서로 만나지 않는다.
+  </p>
+</header>
+
+<section>
+  <h2>전체 경로</h2>
+  <p class="sub">
+    같은 <code>MediaStream</code> 을 둘이 읽는다. 위 갈래가 실시간 자막, 아래 갈래가 녹음 저장이다.
+  </p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1136 524" role="img"
+           aria-label="마이크에서 나온 하나의 MediaStream 이 두 갈래로 갈린다. 위 갈래는 AudioContext 와 AudioWorklet 을 거쳐 100밀리초 프레임으로 WebSocket 을 타고 Cloud Run 게이트웨이를 지나 STT 엔진으로 가고, 전사 결과가 화면 자막으로 돌아온 뒤 저장되지 않고 끝난다. 아래 갈래는 MediaRecorder 가 15초 조각을 만들어 IndexedDB 에 쌓고 R2 로 업로드해 전사 Workflow 를 거쳐 Postgres 에 저장되어 미팅노트가 된다.">
+        <defs>
+          <marker id="ah-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-m"/>
+          </marker>
+          <marker id="ah-l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-l"/>
+          </marker>
+          <marker id="ah-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-s"/>
+          </marker>
+          <marker id="ah-x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-w"/>
+          </marker>
+        </defs>
+
+        <rect class="box" x="12"  y="236" width="92"  height="52" rx="2"/>
+        <text class="t"   x="58"  y="260" text-anchor="middle">마이크</text>
+        <text class="t-s" x="58"  y="277" text-anchor="middle">getUserMedia</text>
+
+        <line class="ln" x1="104" y1="262" x2="134" y2="262" marker-end="url(#ah-m)"/>
+
+        <rect class="box" x="134" y="236" width="118" height="52" rx="2"/>
+        <text class="t"   x="193" y="260" text-anchor="middle">MediaStream</text>
+        <text class="t-s" x="193" y="277" text-anchor="middle">하나뿐이다</text>
+
+        <path class="ln-l" d="M 252 254 H 272 V 124 H 290" marker-end="url(#ah-l)"/>
+        <path class="ln-s" d="M 252 270 H 272 V 414 H 290" marker-end="url(#ah-s)"/>
+
+        <text class="t-lane lane-l" x="292" y="64">실시간 자막 — 표시 전용</text>
+        <line class="ln-l" x1="292" y1="76" x2="1104" y2="76" opacity=".3"/>
+
+        <rect class="box-l" x="292" y="98" width="112" height="52" rx="2"/>
+        <text class="t"   x="348" y="120" text-anchor="middle">AudioContext</text>
+        <text class="t-s" x="348" y="137" text-anchor="middle">16 kHz 리샘플</text>
+        <line class="ln-l" x1="404" y1="124" x2="432" y2="124" marker-end="url(#ah-l)"/>
+
+        <rect class="box-l" x="432" y="98" width="112" height="52" rx="2"/>
+        <text class="t"   x="488" y="120" text-anchor="middle">AudioWorklet</text>
+        <text class="t-s" x="488" y="137" text-anchor="middle">pcm-tap</text>
+        <line class="ln-l" x1="544" y1="124" x2="572" y2="124" marker-end="url(#ah-l)"/>
+
+        <rect class="box-l" x="572" y="98" width="112" height="52" rx="2"/>
+        <text class="t"   x="628" y="120" text-anchor="middle">100ms 프레임</text>
+        <text class="t-s" x="628" y="137" text-anchor="middle">3,200 B</text>
+        <line class="ln-l" x1="684" y1="124" x2="712" y2="124" marker-end="url(#ah-l)"/>
+
+        <rect class="box-l" x="712" y="98" width="112" height="52" rx="2"/>
+        <text class="t"   x="768" y="120" text-anchor="middle">WebSocket</text>
+        <text class="t-s" x="768" y="137" text-anchor="middle">wss · ?token=</text>
+        <line class="ln-l" x1="824" y1="124" x2="852" y2="124" marker-end="url(#ah-l)"/>
+
+        <rect class="box-l" x="852" y="98" width="112" height="52" rx="2"/>
+        <text class="t"   x="908" y="120" text-anchor="middle">Cloud Run</text>
+        <text class="t-s" x="908" y="137" text-anchor="middle">게이트웨이</text>
+        <line class="ln-l" x1="964" y1="124" x2="982" y2="124" marker-end="url(#ah-l)"/>
+
+        <rect class="box-l" x="982" y="98" width="122" height="52" rx="2"/>
+        <text class="t"   x="1043" y="120" text-anchor="middle">STT 엔진</text>
+        <text class="t-s" x="1043" y="137" text-anchor="middle">Deepgram · Google</text>
+
+        <path class="ln-l dash" d="M 1043 150 V 208 H 484" marker-end="url(#ah-l)"/>
+        <text class="t-s" x="770" y="200" text-anchor="middle">transcript JSON · is_final · speaker</text>
+
+        <rect class="box-l" x="292" y="182" width="192" height="52" rx="2"/>
+        <text class="t"   x="388" y="204" text-anchor="middle">화면 자막</text>
+        <text class="t-s" x="388" y="221" text-anchor="middle">최근 300줄만 유지</text>
+
+        <path class="ln-w" d="M 388 234 V 262" marker-end="url(#ah-x)"/>
+        <rect class="box-w" x="292" y="262" width="192" height="40" rx="2"/>
+        <text class="t" x="388" y="287" text-anchor="middle">여기서 끝 — 저장되지 않는다</text>
+
+        <text class="t-lane lane-s" x="292" y="360">녹음 저장 — 미팅노트의 근거</text>
+        <line class="ln-s" x1="292" y1="372" x2="1104" y2="372" opacity=".3"/>
+
+        <rect class="box-s" x="292" y="388" width="112" height="52" rx="2"/>
+        <text class="t"   x="348" y="410" text-anchor="middle">MediaRecorder</text>
+        <text class="t-s" x="348" y="427" text-anchor="middle">15초 조각</text>
+        <line class="ln-s" x1="404" y1="414" x2="432" y2="414" marker-end="url(#ah-s)"/>
+
+        <rect class="box-s" x="432" y="388" width="112" height="52" rx="2"/>
+        <text class="t"   x="488" y="410" text-anchor="middle">IndexedDB</text>
+        <text class="t-s" x="488" y="427" text-anchor="middle">기기 안 백업</text>
+        <line class="ln-s" x1="544" y1="414" x2="572" y2="414" marker-end="url(#ah-s)"/>
+
+        <rect class="box-s" x="572" y="388" width="112" height="52" rx="2"/>
+        <text class="t"   x="628" y="410" text-anchor="middle">업로드</text>
+        <text class="t-s" x="628" y="427" text-anchor="middle">10분 조각</text>
+        <line class="ln-s" x1="684" y1="414" x2="712" y2="414" marker-end="url(#ah-s)"/>
+
+        <rect class="box-s" x="712" y="388" width="112" height="52" rx="2"/>
+        <text class="t"   x="768" y="410" text-anchor="middle">R2</text>
+        <text class="t-s" x="768" y="427" text-anchor="middle">오디오 원본</text>
+        <line class="ln-s" x1="824" y1="414" x2="852" y2="414" marker-end="url(#ah-s)"/>
+
+        <rect class="box-s" x="852" y="388" width="112" height="52" rx="2"/>
+        <text class="t"   x="908" y="410" text-anchor="middle">전사 Workflow</text>
+        <text class="t-s" x="908" y="427" text-anchor="middle">화자 분리</text>
+        <line class="ln-s" x1="964" y1="414" x2="992" y2="414" marker-end="url(#ah-s)"/>
+
+        <rect class="box-s" x="992" y="388" width="112" height="52" rx="2"/>
+        <text class="t"   x="1048" y="410" text-anchor="middle">Postgres</text>
+        <text class="t-s" x="1048" y="427" text-anchor="middle">Neon</text>
+
+        <path class="ln-s" d="M 1048 440 V 476 H 480" marker-end="url(#ah-s)"/>
+        <text class="t-s" x="770" y="468" text-anchor="middle">미팅노트 · 리포트 · 지표</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>두 갈래는 같은 마이크를 읽을 뿐 서로 만나지 않는다.</strong>
+      위 갈래가 만든 자막은 화면에 300줄만 남았다가 페이지를 떠나면 사라진다 — 서버에도, DB 에도, 파일에도 남지 않는다.
+      미팅노트에 들어가는 녹취는 전부 아래 갈래에서 나온다. 그래서 자막이 통째로 끊겨도 녹음은 그대로 돌아가고,
+      그 반대도 같다.
+    </figcaption>
+  </figure>
+</section>
+
+<section class="col">
+  <h2>한 프레임의 여정</h2>
+  <p class="sub">100밀리초어치 소리 하나가 화면에 글자로 뜨기까지. 순서가 정보인 유일한 대목이라 번호를 붙인다.</p>
+  <ol class="steps">
+    <li><b>워클릿이 128프레임씩 받는다</b><span>그대로 보내면 초당 375번 전송이다. 1,600샘플(100ms)을 모아 한 번에 넘긴다.</span></li>
+    <li><b>Float32 를 Int16 으로 자른다</b><span>클리핑을 안 하면 큰 소리에서 값이 뒤집힌다. 결과가 3,200바이트 — 초당 32,000바이트다.</span></li>
+    <li><b>WebSocket 이 이진 프레임으로 보낸다</b><span>토큰은 쿼리스트링에 실린다. 브라우저 WebSocket 은 헤더를 붙일 수 없다.</span></li>
+    <li><b>게이트웨이가 관문 셋을 통과시킨다</b><span>경로 · Origin 허용 목록 · JWT. Worker 와 같은 비밀키를 쓴다 — 한쪽에서 로그인하고 이쪽으로 붙는다.</span></li>
+    <li><b>STT 엔진으로 그대로 중계된다</b><span>게이트웨이는 저장하지 않는다. 흘려보내고 결과를 되돌릴 뿐이다.</span></li>
+    <li><b>중간 결과가 먼저, 확정이 나중에</b><span>화면은 임시 결과를 <em>맨 끝 한 줄만</em> 유지한다. 쌓아 두면 같은 말이 여러 번 보인다.</span></li>
+  </ol>
+</section>
+
+<section>
+  <h2>엔진은 어떻게 골라지는가</h2>
+  <p class="sub">주경로는 Deepgram 이다. 넘어가는 조건이 좁다 — <em>연결이 열리기 전에</em> 실패했을 때만이다.</p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1020 450" role="img"
+           aria-label="WebSocket 업그레이드 요청은 경로 확인, Origin 허용 목록, JWT 검증 세 관문을 지난다. 각각 실패하면 소켓 종료, 403, 401 로 끝난다. 통과하면 Deepgram 연결을 시도하고, 열리기 전에 실패하면 Google STT 로 넘어가 degraded 표시와 함께 화자 구분 없이 전사한다. 열린 뒤에 끊기면 엔진을 바꾸지 않고 세션을 끝낸다.">
+        <defs>
+          <marker id="b-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-m"/>
+          </marker>
+          <marker id="b-l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-l"/>
+          </marker>
+          <marker id="b-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-w"/>
+          </marker>
+        </defs>
+
+        <rect class="box" x="24" y="20" width="226" height="40" rx="2"/>
+        <text class="t" x="137" y="45" text-anchor="middle">WebSocket 업그레이드 요청</text>
+
+        <line class="ln" x1="137" y1="60" x2="137" y2="84" marker-end="url(#b-m)"/>
+        <rect class="box" x="24" y="84" width="226" height="40" rx="2"/>
+        <text class="t" x="137" y="109" text-anchor="middle">경로가 /api/v2/stream 인가</text>
+        <line class="ln" x1="250" y1="104" x2="326" y2="104" marker-end="url(#b-m)"/>
+        <text class="t-s" x="288" y="97" text-anchor="middle">아니오</text>
+        <rect class="box" x="326" y="86" width="140" height="36" rx="2"/>
+        <text class="t" x="396" y="109" text-anchor="middle">소켓 종료</text>
+
+        <line class="ln" x1="137" y1="124" x2="137" y2="148" marker-end="url(#b-m)"/>
+        <rect class="box" x="24" y="148" width="226" height="40" rx="2"/>
+        <text class="t" x="137" y="173" text-anchor="middle">Origin 이 허용 목록에 있나</text>
+        <line class="ln" x1="250" y1="168" x2="326" y2="168" marker-end="url(#b-m)"/>
+        <text class="t-s" x="288" y="161" text-anchor="middle">아니오</text>
+        <rect class="box" x="326" y="150" width="140" height="36" rx="2"/>
+        <text class="t" x="396" y="173" text-anchor="middle">403</text>
+
+        <line class="ln" x1="137" y1="188" x2="137" y2="212" marker-end="url(#b-m)"/>
+        <rect class="box" x="24" y="212" width="226" height="40" rx="2"/>
+        <text class="t" x="137" y="237" text-anchor="middle">JWT 가 유효한가</text>
+        <line class="ln" x1="250" y1="232" x2="326" y2="232" marker-end="url(#b-m)"/>
+        <text class="t-s" x="288" y="225" text-anchor="middle">아니오</text>
+        <rect class="box" x="326" y="214" width="140" height="36" rx="2"/>
+        <text class="t" x="396" y="237" text-anchor="middle">401</text>
+
+        <line class="ln-l" x1="137" y1="252" x2="137" y2="286" marker-end="url(#b-l)"/>
+        <rect class="box-l" x="24" y="286" width="226" height="40" rx="2"/>
+        <text class="t" x="137" y="311" text-anchor="middle">Deepgram 연결 시도</text>
+
+        <line class="ln-l" x1="137" y1="326" x2="137" y2="362" marker-end="url(#b-l)"/>
+        <text class="t-s" x="148" y="349" text-anchor="start">열림</text>
+        <rect class="box-l" x="24" y="362" width="226" height="54" rx="2"/>
+        <text class="t"   x="137" y="384" text-anchor="middle">nova-2 / ko · 화자 구분 있음</text>
+        <text class="t-s" x="137" y="402" text-anchor="middle">ready { engine: deepgram }</text>
+
+        <path class="ln-w" d="M 250 306 H 528" marker-end="url(#b-w)"/>
+        <text class="t-s" x="389" y="298" text-anchor="middle">열리기 전에 실패</text>
+        <rect class="box-w" x="528" y="280" width="250" height="52" rx="2"/>
+        <text class="t"   x="653" y="302" text-anchor="middle">Google STT 스트리밍</text>
+        <text class="t-s" x="653" y="320" text-anchor="middle">ko-KR · degraded: true</text>
+
+        <path class="ln-w dash" d="M 653 332 V 362" marker-end="url(#b-w)"/>
+        <rect class="box" x="528" y="362" width="250" height="54" rx="2"/>
+        <text class="t"   x="653" y="384" text-anchor="middle">화자 구분 없음</text>
+        <text class="t-s" x="653" y="402" text-anchor="middle">speaker: null · 240초마다 회전</text>
+
+        <path class="ln dash" d="M 250 389 H 296 V 204 H 886 V 244" marker-end="url(#b-m)"/>
+        <text class="t-s" x="600" y="196" text-anchor="middle">열린 뒤에 끊기면 — 엔진을 바꾸지 않는다</text>
+        <rect class="box" x="806" y="244" width="160" height="36" rx="2"/>
+        <text class="t" x="886" y="267" text-anchor="middle">세션 종료</text>
+        <text class="t-s" x="886" y="300" text-anchor="middle">중간에 엔진을 바꾸면</text>
+        <text class="t-s" x="886" y="316" text-anchor="middle">화자 번호가 갈아엎어진다</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>백업으로 넘어가는 문은 좁다.</strong> Deepgram 연결이 <em>열리기 전에</em> 실패했을 때만 Google 로 간다.
+      이미 전사가 흐르던 중에 끊기면 그냥 세션을 끝낸다 — 중간에 엔진을 바꾸면 화자 번호 체계가 갈아엎어져
+      녹취가 더 혼란스러워지기 때문이다. 백업으로 간 세션은 <code>degraded: true</code> 를 함께 보내
+      화면이 품질 차이를 알 수 있게 한다.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>5분 벽과 스트림 회전</h2>
+  <p class="sub">Google 의 스트리밍 인식은 약 305초에서 끊긴다. 5분 넘는 회의가 백업의 존재 이유라 그냥 둘 수 없다.</p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 900 210" role="img"
+           aria-label="시간 축 위에서 첫 스트림이 0초에 시작해 240초에 끝나고 남은 결과가 흘러나올 동안 잠시 이어진다. 두 번째 스트림이 240초에 새로 열려 480초까지 간다. Google 의 상한인 305초 지점은 첫 스트림이 이미 물러난 뒤라 걸리지 않는다.">
+        <defs>
+          <marker id="c-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" class="fill-m"/>
+          </marker>
+        </defs>
+
+        <text class="t-s" x="518" y="22" text-anchor="middle">Google 상한 ≈ 305초</text>
+        <line class="ln-w dash" x1="518" y1="30" x2="518" y2="158"/>
+
+        <rect class="box-w" x="60" y="44" width="360" height="32" rx="2"/>
+        <text class="t" x="240" y="65" text-anchor="middle">스트림 1</text>
+        <line class="ln-w dash" x1="420" y1="60" x2="466" y2="60"/>
+        <text class="t-s" x="486" y="64" text-anchor="start">여운</text>
+
+        <rect class="box-w" x="420" y="98" width="360" height="32" rx="2"/>
+        <text class="t" x="600" y="119" text-anchor="middle">스트림 2</text>
+        <line class="ln-w dash" x1="780" y1="114" x2="826" y2="114"/>
+
+        <line class="ln" x1="60" y1="158" x2="866" y2="158" marker-end="url(#c-m)"/>
+        <line class="ln" x1="60"  y1="152" x2="60"  y2="164"/>
+        <line class="ln" x1="420" y1="152" x2="420" y2="164"/>
+        <line class="ln" x1="780" y1="152" x2="780" y2="164"/>
+        <text class="t-s" x="60"  y="180" text-anchor="middle">0초</text>
+        <text class="t-s" x="420" y="180" text-anchor="middle">240초 — 여기서 갈아탄다</text>
+        <text class="t-s" x="780" y="180" text-anchor="middle">480초</text>
+      </svg>
+    </div>
+    <figcaption>
+      240초(7,680,000바이트)마다 새 스트림을 열고 갈아탄다. 상한 305초에 닿을 때쯤엔 첫 스트림이 이미 물러나 있다.
+      이전 스트림은 닫기만 하고 파괴하지 않는다 — 남은 결과가 흘러나올 틈을 준다.
+      <strong>물러난 스트림의 뒤늦은 오류는 무시한다.</strong> 현재 스트림만 세션을 끝낼 수 있다.
+      회전하면 화자 번호가 새로 매겨지므로 화자 분리를 아예 켜지 않는다 — 이어지지 않는 번호는 없느니만 못하다.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>숫자로</h2>
+  <p class="sub">코드에 박혀 있는 값과 실측치다.</p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>무엇</th><th class="num">값</th><th>왜 그 값인가</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>표본율</td><td class="num">16 kHz 모노</td><td>두 엔진 모두 이 형식으로 연다. 초당 32,000바이트.</td></tr>
+        <tr><td>프레임</td><td class="num">3,200 B / 100 ms</td><td>워클릿 조각(128프레임)은 너무 잘아 그대로 보내면 낭비다.</td></tr>
+        <tr><td>화면에 남는 줄</td><td class="num">300 줄</td><td>긴 회의에서 수천 줄이 되면 스크롤이 버벅인다.</td></tr>
+        <tr><td>Deepgram 유지 신호</td><td class="num">8 초</td><td>침묵이 길면 연결이 먼저 끊긴다.</td></tr>
+        <tr><td>Google 스트림 회전</td><td class="num">240 초</td><td>상한 305초에 닿기 전에 갈아탄다.</td></tr>
+        <tr><td>첫 전사까지</td><td class="num">1.3 – 1.4 초</td><td>실측. 두 엔진이 같은 수준이다.</td></tr>
+        <tr><td>백업 경로 글자 수</td><td class="num">697 / 737</td><td>2분 19초 회의 실측. 조금 낮고 화자 구분이 없다.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="col">
+  <h2>이 경로가 하지 않는 일</h2>
+  <div class="note">
+    <p><b>자막은 저장되지 않는다.</b> 화면에 뜬 글자는 서버에도 DB 에도 남지 않는다.
+    코드에 <code>finalText()</code> 라는 함수가 있지만 아무도 부르지 않는다 — 붙여 넣을 곳이 없다.</p>
+    <p><b>게이트웨이는 오디오를 보관하지 않는다.</b> 흘려보내고 결과를 되돌릴 뿐이다.
+    실시간 코칭 클립도 같다 — 전사한 뒤 곧바로 버린다.</p>
+    <p><b>기본값은 꺼짐이다.</b> 스트리밍 전사는 분당 과금이라, 켠 사람에게만 돈다.</p>
+  </div>
+  <p>
+    그래서 회의가 끝난 뒤 남는 녹취는 전부 아래 갈래에서 나온다.
+    자막이 좋아 보였는데 미팅노트가 다르다면, 둘이 서로 다른 엔진의 결과이기 때문이다.
+  </p>
+</section>
+
+<section>
+  <h2>이 경로가 쓰는 서비스</h2>
+  <p class="sub">자막 한 줄이 뜨는 데 관여하는 것만. 과금 방식 기준이다.</p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>서비스</th><th>맡은 일</th><th>과금</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Cloudflare Pages</td><td>화면을 내려준다</td><td>정적 호스팅 — 요청 수 기준</td></tr>
+        <tr><td>Cloudflare Workers</td><td>로그인 · 토큰 발급</td><td>요청 수 기준</td></tr>
+        <tr><td>Google Cloud Run</td><td>자막 게이트웨이</td><td>쓰는 동안만 — 유휴 인스턴스 없음</td></tr>
+        <tr><td>Deepgram</td><td>주 전사 엔진</td><td><strong>분당 과금</strong> — 연결된 시간만큼</td></tr>
+        <tr><td>Google Speech-to-Text</td><td>백업 전사 엔진</td><td><strong>분당 과금</strong> — 주경로 실패 시에만</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  근거: stream-service/src/index.ts · frontend/web/src/lib/liveTranscript.ts<br>
+  SEP v2.0 · 2026-08-21
+</footer>
+
+</div>
+
+</body>
+</html>

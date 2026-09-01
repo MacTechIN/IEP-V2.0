@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SEP v2.0 에 실제로 구현돼 있는 것 — 화면을 뺀 전부. 계층 지도 · API 표면 · 비동기 파이프라인 · 데이터 모델 · 인증 · 운영.">
+<title>SEP v2 구현 지도</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@500;600&display=swap">
+<style>
+  :root {
+    --paper:  #F3F4F7;
+    --surface:#FFFFFF;
+    --sunk:   #E9EBF0;
+    --ink:    #14161E;
+    --muted:  #5C6275;
+    --hair:   #CFD3DE;
+    --edge:   #2F4B9B;  --edge-bg:  #E4E9F6;
+    --async:  #7A3E86;  --async-bg: #F1E6F3;
+    --store:  #1F6B52;  --store-bg: #E0EEE8;
+    --ext:    #A4562A;  --ext-bg:   #F7E9DF;
+    --dead:   #7A7F8F;  --dead-bg:  #E7E9EE;
+    --measure: 74ch;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:  #0F1116; --surface:#181B23; --sunk:#141821;
+      --ink:    #E6E8F0; --muted:  #9BA2B6; --hair:#2C313E;
+      --edge:   #8AA4E8;  --edge-bg:  #1A2340;
+      --async:  #C99AD2;  --async-bg: #2C1C31;
+      --store:  #6BC3A2;  --store-bg: #12291F;
+      --ext:    #E39A6A;  --ext-bg:   #2E1E12;
+      --dead:   #8E94A6;  --dead-bg:  #1E212A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:  #0F1116; --surface:#181B23; --sunk:#141821;
+    --ink:    #E6E8F0; --muted:  #9BA2B6; --hair:#2C313E;
+    --edge:   #8AA4E8;  --edge-bg:  #1A2340;
+    --async:  #C99AD2;  --async-bg: #2C1C31;
+    --store:  #6BC3A2;  --store-bg: #12291F;
+    --ext:    #E39A6A;  --ext-bg:   #2E1E12;
+    --dead:   #8E94A6;  --dead-bg:  #1E212A;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+    font-size: 15.5px; line-height: 1.75; margin: 0; padding: 0 24px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; }
+  .col { max-width: var(--measure); }
+
+  header { padding: 72px 0 36px; border-bottom: 2px solid var(--ink); margin-bottom: 12px; }
+  .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: .16em;
+             text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+  h1 { font-family: 'Noto Serif KR', serif; font-weight: 600; font-size: clamp(34px, 5.2vw, 52px);
+       line-height: 1.18; margin: 0 0 20px; text-wrap: balance; letter-spacing: -.02em; }
+  .thesis { font-size: 17px; color: var(--muted); margin: 0; max-width: 60ch; }
+  .thesis strong { color: var(--ink); font-weight: 700; }
+
+  .scale { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--hair);
+           margin-bottom: 56px; padding: 18px 0; }
+  .scale div { flex: 1 1 130px; padding: 4px 16px 4px 0; }
+  .scale b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 22px;
+             font-weight: 500; font-variant-numeric: tabular-nums; }
+  .scale span { font-size: 12.5px; color: var(--muted); }
+
+  section { margin: 0 0 68px; }
+  h2 { font-family: 'Noto Serif KR', serif; font-weight: 600; font-size: 27px; line-height: 1.3;
+       margin: 0 0 6px; text-wrap: balance; }
+  .sub { color: var(--muted); font-size: 14.5px; margin: 0 0 26px; max-width: 68ch; }
+  p { margin: 0 0 16px; }
+  .col p { max-width: var(--measure); }
+
+  figure { margin: 0 0 14px; }
+  .scroller { overflow-x: auto; padding: 6px; background: var(--surface);
+              border: 1px solid var(--hair); border-radius: 3px; }
+  .scroller svg { display: block; min-width: 700px; width: 100%; height: auto; }
+  figcaption { font-size: 13.5px; color: var(--muted); margin-top: 13px; max-width: 72ch; line-height: 1.65; }
+  figcaption strong { color: var(--ink); font-weight: 700; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin: 0 0 18px;
+            font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 11px; height: 11px; border-radius: 2px; display: inline-block; border: 1px solid; }
+  .k-edge, .k-async, .k-store, .k-ext { background: currentColor; }
+  .k-edge  { color: var(--edge);  border-color: var(--edge); }
+  .k-async { color: var(--async); border-color: var(--async); }
+  .k-store { color: var(--store); border-color: var(--store); }
+  .k-ext   { color: var(--ext);   border-color: var(--ext); }
+  .k-dead  { background: var(--dead-bg);  border-color: var(--dead); }
+
+  .box-e { fill: var(--edge-bg);  stroke: var(--edge);  stroke-width: 1.25; }
+  .box-a { fill: var(--async-bg); stroke: var(--async); stroke-width: 1.25; }
+  .box-s { fill: var(--store-bg); stroke: var(--store); stroke-width: 1.25; }
+  .box-x { fill: var(--ext-bg);   stroke: var(--ext);   stroke-width: 1.25; }
+  .box-d { fill: var(--dead-bg);  stroke: var(--dead);  stroke-width: 1.25; stroke-dasharray: 4 3; }
+  .box-n { fill: var(--sunk);     stroke: var(--hair);  stroke-width: 1; }
+  .t   { fill: var(--ink); font-family: 'Noto Sans KR', sans-serif; font-size: 12px; }
+  .tb  { fill: var(--ink); font-family: 'Noto Sans KR', sans-serif; font-size: 12.5px; font-weight: 700; }
+  .ts  { fill: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .tl  { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .12em; }
+  .c-e { fill: var(--edge); } .c-a { fill: var(--async); }
+  .c-s { fill: var(--store); } .c-x { fill: var(--ext); } .c-d { fill: var(--dead); }
+  .ln   { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+  .ln-e { stroke: var(--edge);  stroke-width: 1.4; fill: none; }
+  .ln-a { stroke: var(--async); stroke-width: 1.4; fill: none; }
+  .ln-s { stroke: var(--store); stroke-width: 1.4; fill: none; }
+  .ln-x { stroke: var(--ext);   stroke-width: 1.4; fill: none; }
+  .dash { stroke-dasharray: 5 4; }
+  .f-m { fill: var(--muted); } .f-e { fill: var(--edge); } .f-a { fill: var(--async); }
+  .f-s { fill: var(--store); } .f-x { fill: var(--ext); }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--hair); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 15px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  thead th { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: .1em;
+             text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--sunk); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.m, th.m { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12.5px; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: .87em;
+         background: var(--sunk); padding: 1px 5px; border-radius: 2px; }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 7px;
+         border-radius: 2px; border: 1px solid; white-space: nowrap; }
+  .tag-e { color: var(--edge);  border-color: var(--edge);  background: var(--edge-bg); }
+  .tag-a { color: var(--async); border-color: var(--async); background: var(--async-bg); }
+  .tag-x { color: var(--ext);   border-color: var(--ext);   background: var(--ext-bg); }
+  .tag-d { color: var(--dead);  border-color: var(--dead);  background: var(--dead-bg); }
+
+  .note { border-left: 3px solid var(--ext); background: var(--ext-bg);
+          padding: 16px 20px; border-radius: 0 3px 3px 0; margin: 0 0 20px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note b { font-weight: 700; }
+
+  footer { border-top: 1px solid var(--hair); padding-top: 22px; font-size: 12px;
+           color: var(--muted); font-family: 'JetBrains Mono', monospace; line-height: 1.9; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">SEP v2.0 · 화면을 뺀 전부 · 2026-08-21</p>
+  <h1>무엇이 실제로<br>구현돼 있는가</h1>
+  <p class="thesis">
+    화면 코드를 빼고 남는 것 — <strong>엣지 API · 비동기 파이프라인 둘 · 실시간 게이트웨이 ·
+    저장소 셋 · 사내 잔여 서버 하나</strong>. 코드에서 뽑은 목록이지 계획서가 아니다.
+  </p>
+</header>
+
+<div class="scale">
+  <div><b>53</b><span>API 경로</span></div>
+  <div><b>9</b><span>서비스 모듈</span></div>
+  <div><b>2</b><span>Workflow</span></div>
+  <div><b>13</b><span>테이블 · 마이그레이션</span></div>
+  <div><b>5</b><span>CI 워크플로</span></div>
+  <div><b>9</b><span>운영 도구</span></div>
+  <div><b>9,377</b><span>줄 (UI 제외)</span></div>
+</div>
+
+<section>
+  <h2>계층 지도</h2>
+  <p class="sub">무엇이 어디서 도는가. 색은 실행 환경이고, 아래 도해 전체에서 같은 뜻으로 쓴다.</p>
+
+  <div class="legend">
+    <span><i class="k-edge"></i>Cloudflare 엣지</span>
+    <span><i class="k-async"></i>비동기 Workflow</span>
+    <span><i class="k-store"></i>저장소</span>
+    <span><i class="k-ext"></i>외부 서비스</span>
+    <span><i class="k-dead"></i>사내 잔여 — 이관 중</span>
+  </div>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1150 604" role="img"
+           aria-label="SEP v2 계층 지도. 브라우저와 아이폰이 Cloudflare Pages 와 Worker API 에 붙는다. Worker 는 Hono 라우터로 53개 경로를 제공하고 Hyperdrive 를 거쳐 Neon Postgres 에, 직접 R2 에 접근한다. 무거운 일은 전사 Workflow 와 분석 Workflow 두 개로 넘긴다. 실시간 자막은 Cloud Run 의 스트림 게이트웨이가 맡아 Deepgram 과 Google STT 에 붙는다. 사내 Express 백엔드와 Postgres 는 아직 떠 있으나 이관 중이다.">
+        <defs>
+          <marker id="m-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-m"/></marker>
+          <marker id="m-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-e"/></marker>
+          <marker id="m-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-a"/></marker>
+          <marker id="m-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-s"/></marker>
+          <marker id="m-x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-x"/></marker>
+        </defs>
+
+        <!-- 클라이언트 -->
+        <text class="tl f-m" x="16" y="24">클라이언트</text>
+        <rect class="box-n" x="16" y="36" width="150" height="44" rx="2"/>
+        <text class="t"  x="91" y="56" text-anchor="middle">브라우저 · 아이폰</text>
+        <text class="ts" x="91" y="71" text-anchor="middle">화면 — 이 문서 범위 밖</text>
+
+        <line class="ln" x1="140" y1="80" x2="140" y2="116" marker-end="url(#m-m)"/>
+        <path class="ln-e dash" d="M 166 58 H 1090 V 116" marker-end="url(#m-e)"/>
+        <text class="ts" x="560" y="50" text-anchor="middle">wss — 실시간 자막만 따로 간다</text>
+
+        <!-- 엣지 -->
+        <text class="tl c-e" x="16" y="106">CLOUDFLARE</text>
+        <rect class="box-e" x="16" y="116" width="150" height="44" rx="2"/>
+        <text class="t"  x="91" y="136" text-anchor="middle">Pages</text>
+        <text class="ts" x="91" y="151" text-anchor="middle">정적 번들</text>
+
+        <rect class="box-e" x="196" y="116" width="470" height="150" rx="2"/>
+        <text class="tb" x="216" y="140">Worker API — Hono</text>
+        <text class="ts" x="216" y="156">sep-v2-api · nodejs_compat · observability on</text>
+        <rect class="box-n" x="216" y="168" width="200" height="36" rx="2"/>
+        <text class="t"  x="316" y="184" text-anchor="middle">미들웨어 4</text>
+        <text class="ts" x="316" y="197" text-anchor="middle">로거 · CORS · 인증 · 관리자</text>
+        <rect class="box-n" x="430" y="168" width="216" height="36" rx="2"/>
+        <text class="t"  x="538" y="184" text-anchor="middle">라우트 53</text>
+        <text class="ts" x="538" y="197" text-anchor="middle">auth · resources · meetings</text>
+        <rect class="box-n" x="216" y="214" width="430" height="36" rx="2"/>
+        <text class="t"  x="431" y="230" text-anchor="middle">서비스 9 · lib 5</text>
+        <text class="ts" x="431" y="243" text-anchor="middle">DB · R2 · OpenAI 를 여기서 부른다</text>
+
+        <line class="ln-e" x1="166" y1="138" x2="196" y2="138" marker-end="url(#m-e)"/>
+
+        <!-- Cloud Run -->
+        <text class="tl c-e" x="880" y="106">GOOGLE CLOUD RUN</text>
+        <rect class="box-e" x="880" y="116" width="254" height="76" rx="2"/>
+        <text class="tb" x="1007" y="140" text-anchor="middle">스트림 게이트웨이</text>
+        <text class="ts" x="1007" y="157" text-anchor="middle">ws · JWT 검증 · Origin 확인</text>
+        <text class="ts" x="1007" y="172" text-anchor="middle">최소 인스턴스 0 · 최대 5</text>
+
+        <!-- 비동기 -->
+        <text class="tl c-a" x="16" y="300">비동기 — 요청 수명 밖</text>
+        <rect class="box-a" x="196" y="312" width="228" height="62" rx="2"/>
+        <text class="tb" x="310" y="334" text-anchor="middle">전사 Workflow</text>
+        <text class="ts" x="310" y="350" text-anchor="middle">sep-v2-transcribe</text>
+        <text class="ts" x="310" y="364" text-anchor="middle">단계 1 · 재시도 2</text>
+
+        <rect class="box-a" x="438" y="312" width="228" height="62" rx="2"/>
+        <text class="tb" x="552" y="334" text-anchor="middle">분석 Workflow</text>
+        <text class="ts" x="552" y="350" text-anchor="middle">sep-v2-analysis</text>
+        <text class="ts" x="552" y="364" text-anchor="middle">단계 7 · 재시도 2~10</text>
+
+        <path class="ln-a" d="M 310 266 V 312" marker-end="url(#m-a)"/>
+        <path class="ln-a" d="M 552 266 V 312" marker-end="url(#m-a)"/>
+        <text class="ts" x="316" y="288" text-anchor="start">업로드가 띄운다</text>
+        <text class="ts" x="558" y="288" text-anchor="start">분석 요청이 띄운다</text>
+
+        <!-- 저장소 -->
+        <text class="tl c-s" x="16" y="424">저장소</text>
+        <rect class="box-s" x="16" y="436" width="196" height="62" rx="2"/>
+        <text class="tb" x="114" y="458" text-anchor="middle">Neon Postgres</text>
+        <text class="ts" x="114" y="474" text-anchor="middle">스키마 v2 · 테이블 13</text>
+        <text class="ts" x="114" y="488" text-anchor="middle">Hyperdrive 경유</text>
+
+        <rect class="box-s" x="232" y="436" width="196" height="62" rx="2"/>
+        <text class="tb" x="330" y="458" text-anchor="middle">R2</text>
+        <text class="ts" x="330" y="474" text-anchor="middle">sep-v2-uploads</text>
+        <text class="ts" x="330" y="488" text-anchor="middle">Worker·Workflow 양쪽이 쓴다</text>
+
+        <path class="ln-s" d="M 240 250 V 400 H 114 V 436" marker-end="url(#m-s)"/>
+        <path class="ln-s" d="M 330 374 V 436" marker-end="url(#m-s)"/>
+        <text class="ts" x="336" y="392" text-anchor="start">전사 결과를 쓴다</text>
+        <path class="ln-s" d="M 552 374 V 410 H 330" marker-end="url(#m-s)"/>
+        <text class="ts" x="484" y="404" text-anchor="middle">오디오를 읽는다</text>
+
+        <!-- 외부 -->
+        <text class="tl c-x" x="700" y="424">외부 서비스</text>
+        <rect class="box-x" x="700" y="436" width="196" height="62" rx="2"/>
+        <text class="tb" x="798" y="458" text-anchor="middle">OpenAI</text>
+        <text class="ts" x="798" y="474" text-anchor="middle">전사 · 화자 분리</text>
+        <text class="ts" x="798" y="488" text-anchor="middle">요약 · 점수 · 코칭</text>
+
+        <rect class="box-x" x="916" y="436" width="218" height="62" rx="2"/>
+        <text class="tb" x="1025" y="458" text-anchor="middle">Deepgram · Google STT</text>
+        <text class="ts" x="1025" y="474" text-anchor="middle">실시간 전사 — 주 · 백업</text>
+        <text class="ts" x="1025" y="488" text-anchor="middle">분당 과금</text>
+
+        <path class="ln-x" d="M 666 343 H 798 V 436" marker-end="url(#m-x)"/>
+        <path class="ln-x" d="M 1007 192 V 436" marker-end="url(#m-x)"/>
+
+        <!-- 사내 잔여 -->
+        <text class="tl c-d" x="16" y="540">사내 서버 — 이관 중</text>
+        <rect class="box-d" x="16" y="552" width="412" height="40" rx="2"/>
+        <text class="t"  x="222" y="570" text-anchor="middle">Express 백엔드 · Postgres · 웹 컨테이너</text>
+        <text class="ts" x="222" y="584" text-anchor="middle">4,046줄 · 아직 가동 중 · 프로덕션 경로 아님</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>요청을 받는 곳과 무거운 일을 하는 곳이 갈려 있다.</strong>
+      Worker 는 응답까지 짧게 끝내고, 전사·분석은 Workflow 로 넘긴다 —
+      요청이 끊겨도 살아 있고 단계마다 따로 재시도되기 때문이다.
+      실시간 자막만 Worker 를 거치지 않고 Cloud Run 으로 직접 간다: Workers 에는 연결을 듣는 소켓이 없다.
+      점선 상자는 사내에 아직 떠 있지만 프로덕션 경로가 아닌 것이다.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>요청 하나의 생애</h2>
+  <p class="sub">모든 경로가 같은 사슬을 지난다. 예외가 둘 있고, 둘 다 이유가 있다.</p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1150 330" role="img"
+           aria-label="요청은 requestLogger 로 요청 id 를 받고 CORS 허용 목록을 지나 requireAuth 와 필요하면 requireAdmin 을 거쳐 라우트에 닿는다. 예외가 둘 있다. 오디오 재생은 헤더를 붙일 수 없어 쿼리 티켓으로 통과하고, 프로브 경로는 비밀 헤더를 쓰며 틀리면 404 로 존재를 숨긴다. 처리 중 던져진 오류는 onError 가 받아 로그에만 원인을 남기고 응답에는 500 만 준다.">
+        <defs>
+          <marker id="r-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-m"/></marker>
+          <marker id="r-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-e"/></marker>
+        </defs>
+
+        <rect class="box-n" x="16" y="86" width="120" height="52" rx="2"/>
+        <text class="t"  x="76" y="108" text-anchor="middle">요청</text>
+        <text class="ts" x="76" y="124" text-anchor="middle">/api/v2/*</text>
+        <line class="ln-e" x1="136" y1="112" x2="166" y2="112" marker-end="url(#r-e)"/>
+
+        <rect class="box-e" x="166" y="86" width="150" height="52" rx="2"/>
+        <text class="t"  x="241" y="108" text-anchor="middle">requestLogger</text>
+        <text class="ts" x="241" y="124" text-anchor="middle">rid 부여 · 소요 기록</text>
+        <line class="ln-e" x1="316" y1="112" x2="346" y2="112" marker-end="url(#r-e)"/>
+
+        <rect class="box-e" x="346" y="86" width="150" height="52" rx="2"/>
+        <text class="t"  x="421" y="108" text-anchor="middle">CORS</text>
+        <text class="ts" x="421" y="124" text-anchor="middle">허용 목록 · 와일드카드 없음</text>
+        <line class="ln-e" x1="496" y1="112" x2="526" y2="112" marker-end="url(#r-e)"/>
+
+        <rect class="box-e" x="526" y="86" width="150" height="52" rx="2"/>
+        <text class="t"  x="601" y="108" text-anchor="middle">requireAuth</text>
+        <text class="ts" x="601" y="124" text-anchor="middle">Bearer JWT</text>
+        <line class="ln-e" x1="676" y1="112" x2="706" y2="112" marker-end="url(#r-e)"/>
+
+        <rect class="box-e" x="706" y="86" width="150" height="52" rx="2"/>
+        <text class="t"  x="781" y="108" text-anchor="middle">requireAdmin</text>
+        <text class="ts" x="781" y="124" text-anchor="middle">/admin/* 만</text>
+        <line class="ln-e" x1="856" y1="112" x2="886" y2="112" marker-end="url(#r-e)"/>
+
+        <rect class="box-e" x="886" y="86" width="150" height="52" rx="2"/>
+        <text class="t"  x="961" y="108" text-anchor="middle">라우트 핸들러</text>
+        <text class="ts" x="961" y="124" text-anchor="middle">서비스 호출</text>
+
+        <!-- 예외 -->
+        <text class="tl f-m" x="16" y="182">예외 둘</text>
+        <path class="ln dash" d="M 226 196 H 886 V 138" marker-end="url(#r-m)"/>
+        <rect class="box-n" x="16" y="196" width="210" height="46" rx="2"/>
+        <text class="t"  x="121" y="215" text-anchor="middle">오디오 재생 — 쿼리 티켓</text>
+        <text class="ts" x="121" y="230" text-anchor="middle">audio 태그는 헤더를 못 붙인다</text>
+
+        <path class="ln dash" d="M 226 274 H 940 V 138" marker-end="url(#r-m)"/>
+        <rect class="box-n" x="16" y="252" width="210" height="46" rx="2"/>
+        <text class="t"  x="121" y="271" text-anchor="middle">프로브 — 비밀 헤더</text>
+        <text class="ts" x="121" y="286" text-anchor="middle">틀리면 404 로 존재를 숨긴다</text>
+
+        <text class="ts" x="470" y="190" text-anchor="middle">인증을 건너뛰되 라우트가 티켓을 검증한다 — 녹음 하나에만, 10분만</text>
+        <text class="ts" x="470" y="268" text-anchor="middle">공개하지 않는다. 행 수조차 내부 구조에 대한 정보다</text>
+
+        <!-- onError -->
+        <path class="ln dash" d="M 961 138 V 164 H 1090" marker-end="url(#r-m)"/>
+        <rect class="box-n" x="1000" y="196" width="134" height="46" rx="2"/>
+        <text class="t"  x="1067" y="215" text-anchor="middle">onError</text>
+        <text class="ts" x="1067" y="230" text-anchor="middle">원인은 로그에만</text>
+        <path class="ln dash" d="M 1090 164 V 196"/>
+        <text class="ts" x="1067" y="262" text-anchor="middle">응답은 500 만</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>내부 구조를 응답으로 내보내지 않는 것이 이 사슬의 규칙이다.</strong>
+      CORS 는 허용 목록에 없는 오리진에 헤더를 아예 주지 않고, 프로브는 비밀 헤더가 틀리면
+      403 이 아니라 <em>404</em> 를 준다 — 403 은 "여기 뭔가 있다" 를 알려준다.
+      오류도 원인은 로그에만 남고 응답에는 500 만 나간다.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>비동기 파이프라인 둘</h2>
+  <p class="sub">요청 안에서 STT 를 기다리던 것을 떼어낸 결과다. 10분짜리 하나에 실측 188초가 걸렸다.</p>
+
+  <figure>
+    <div class="scroller">
+      <svg viewBox="0 0 1150 356" role="img"
+           aria-label="전사 Workflow 는 단계 하나로 녹음 한 건을 전사하고 재시도는 2회다. 분석 Workflow 는 일곱 단계로 시작 표시, 녹음 전사 확인, 전사, 화자 역할과 세그먼트 저장, 기본 분석, 리포트와 코칭, 완료 표시를 거치며 단계마다 재시도 횟수가 다르다. 두 파이프라인은 녹음 전사 확인 단계에서 만난다.">
+        <defs>
+          <marker id="w-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-a"/></marker>
+          <marker id="w-m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="f-m"/></marker>
+        </defs>
+
+        <text class="tl c-a" x="16" y="26">전사 WORKFLOW — 녹음 한 건</text>
+        <rect class="box-n" x="16" y="38" width="140" height="46" rx="2"/>
+        <text class="t"  x="86" y="57" text-anchor="middle">업로드 완료</text>
+        <text class="ts" x="86" y="72" text-anchor="middle">R2 + DB 행이 짝</text>
+        <line class="ln-a" x1="156" y1="61" x2="186" y2="61" marker-end="url(#w-a)"/>
+        <rect class="box-a" x="186" y="38" width="180" height="46" rx="2"/>
+        <text class="t"  x="276" y="57" text-anchor="middle">전사</text>
+        <text class="ts" x="276" y="72" text-anchor="middle">재시도 2 · 20초 간격</text>
+        <line class="ln-a" x1="366" y1="61" x2="396" y2="61" marker-end="url(#w-a)"/>
+        <rect class="box-s" x="396" y="38" width="180" height="46" rx="2"/>
+        <text class="t"  x="486" y="57" text-anchor="middle">segments · transcription</text>
+        <text class="ts" x="486" y="72" text-anchor="middle">meeting_recordings 행에</text>
+
+        <text class="ts" x="600" y="52" text-anchor="start">시도 한도 3회 — 넘으면 exhausted</text>
+        <text class="ts" x="600" y="68" text-anchor="start">되돌리는 코드가 없다 (알려진 문제)</text>
+
+        <text class="tl c-a" x="16" y="132">분석 WORKFLOW — 미팅 한 건</text>
+        <rect class="box-a" x="16"  y="146" width="146" height="52" rx="2"/>
+        <text class="t"  x="89"  y="168" text-anchor="middle">시작 표시</text>
+        <text class="ts" x="89"  y="183" text-anchor="middle">stage · progress</text>
+        <line class="ln-a" x1="162" y1="172" x2="182" y2="172" marker-end="url(#w-a)"/>
+
+        <rect class="box-a" x="182" y="146" width="146" height="52" rx="2"/>
+        <text class="t"  x="255" y="168" text-anchor="middle">녹음 전사 확인</text>
+        <text class="ts" x="255" y="183" text-anchor="middle">재시도 10 · 20초</text>
+        <line class="ln-a" x1="328" y1="172" x2="348" y2="172" marker-end="url(#w-a)"/>
+
+        <rect class="box-a" x="348" y="146" width="146" height="52" rx="2"/>
+        <text class="t"  x="421" y="168" text-anchor="middle">전사</text>
+        <text class="ts" x="421" y="183" text-anchor="middle">재시도 2 · 10초</text>
+        <line class="ln-a" x1="494" y1="172" x2="514" y2="172" marker-end="url(#w-a)"/>
+
+        <rect class="box-a" x="514" y="146" width="146" height="52" rx="2"/>
+        <text class="t"  x="587" y="168" text-anchor="middle">화자 역할 · 세그먼트</text>
+        <text class="ts" x="587" y="183" text-anchor="middle">재시도 없음</text>
+        <line class="ln-a" x1="660" y1="172" x2="680" y2="172" marker-end="url(#w-a)"/>
+
+        <rect class="box-a" x="680" y="146" width="146" height="52" rx="2"/>
+        <text class="t"  x="753" y="168" text-anchor="middle">기본 분석</text>
+        <text class="ts" x="753" y="183" text-anchor="middle">재시도 2 · 10초</text>
+        <line class="ln-a" x1="826" y1="172" x2="846" y2="172" marker-end="url(#w-a)"/>
+
+        <rect class="box-a" x="846" y="146" width="146" height="52" rx="2"/>
+        <text class="t"  x="919" y="168" text-anchor="middle">리포트 · 코칭</text>
+        <text class="ts" x="919" y="183" text-anchor="middle">재시도 2 · 15초</text>
+        <line class="ln-a" x1="992" y1="172" x2="1012" y2="172" marker-end="url(#w-a)"/>
+
+        <rect class="box-a" x="1012" y="146" width="122" height="52" rx="2"/>
+        <text class="t"  x="1073" y="168" text-anchor="middle">완료 표시</text>
+        <text class="ts" x="1073" y="183" text-anchor="middle">progress 100</text>
+
+        <!-- 두 파이프라인이 만나는 곳 -->
+        <path class="ln-a dash" d="M 276 84 V 116 H 255 V 146" marker-end="url(#w-a)"/>
+        <text class="ts" x="292" y="108" text-anchor="start">전사가 끝나기를 여기서 기다린다 — 최대 10회 · 200초</text>
+
+        <!-- 실패 처리 -->
+        <path class="ln dash" d="M 421 198 V 232 H 89 V 258" marker-end="url(#w-m)"/>
+        <rect class="box-n" x="16" y="258" width="292" height="46" rx="2"/>
+        <text class="t"  x="162" y="277" text-anchor="middle">analysis_error · analysis_stage 에 남긴다</text>
+        <text class="ts" x="162" y="292" text-anchor="middle">어느 단계에서 멈췄는지 화면이 말할 수 있게</text>
+
+        <text class="ts" x="440" y="228" text-anchor="start">단계가 소진되면</text>
+        <text class="ts" x="620" y="278" text-anchor="start">단계마다 따로 재시도된다 — 리포트에서 실패해도 전사를 다시 하지 않는다</text>
+      </svg>
+    </div>
+    <figcaption>
+      <strong>단계를 나눈 기준은 "다시 해서 얻는 게 있는가" 다.</strong>
+      전사와 화자 판정은 사이에 저장하는 중간 상태가 없어 쪼개지 않았다 — 쪼개도 재시도가
+      전사부터 다시 한다. 반대로 리포트는 따로 떼어 놨다: 거기서 실패했다고 이미 낸 STT 비용을
+      다시 낼 이유가 없다. 분석은 전사가 끝나기를 <em>기다릴 수 있게</em> 재시도 10회를 준다.
+    </figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>API 표면</h2>
+  <p class="sub">경로 53개. 인증이 필요 없는 것은 넷뿐이다.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>묶음</th><th class="m">수</th><th>경로</th><th>보호</th></tr></thead>
+      <tbody>
+        <tr><td>공개</td><td class="m">4</td><td><code>/health</code> · <code>auth/login</code> · <code>auth/refresh</code> · <code>auth/logout</code></td><td><span class="tag tag-e">없음</span></td></tr>
+        <tr><td>인증</td><td class="m">1</td><td><code>auth/change-password</code> — 최소 9자 · 성공 시 전 세션 무효화</td><td>Bearer</td></tr>
+        <tr><td>미팅</td><td class="m">8</td><td>생성 · 목록 · 상세 · 수정 · 삭제 · 녹음 목록 · 오디오 업로드 · 분석 요청</td><td>Bearer</td></tr>
+        <tr><td>분석 · 녹취</td><td class="m">6</td><td>결과 조회 · 삭제 · 녹취 조회 · 세그먼트 수정/되돌리기 · 미팅노트 재생성</td><td>Bearer</td></tr>
+        <tr><td>녹음</td><td class="m">6</td><td>업로드 · 초안 목록 · 수정 · 삭제 · 재생 티켓 · 오디오 스트리밍</td><td>Bearer + 티켓</td></tr>
+        <tr><td>고객</td><td class="m">5</td><td>목록 · 생성 · 상세 · 수정 · 소프트 삭제</td><td>Bearer</td></tr>
+        <tr><td>액션 아이템</td><td class="m">4</td><td>목록 · 생성 · 수정 · 삭제 (+ 완료 체크는 분석 쪽)</td><td>Bearer</td></tr>
+        <tr><td>대시보드 · 통계</td><td class="m">5</td><td>홈 · 내 점수 · 인사이트 · 요약 · 추세</td><td>Bearer</td></tr>
+        <tr><td>사용자</td><td class="m">4</td><td>내 정보 조회/수정 · 목소리 등록/삭제</td><td>Bearer</td></tr>
+        <tr><td>관리자</td><td class="m">4</td><td>사용자 목록 · 생성 · 활성 토글 · <code>_ping</code></td><td><span class="tag tag-e">Bearer + admin</span></td></tr>
+        <tr><td>실시간 코칭</td><td class="m">1</td><td><code>/risk</code> — 25초 클립을 전사·판정하고 <strong>버린다</strong></td><td>Bearer</td></tr>
+        <tr><td>프로브</td><td class="m">3</td><td><code>_probe/db</code> · <code>_probe/r2</code> · <code>_probe/analyze-audio</code></td><td><span class="tag tag-x">비밀 헤더</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>인증과 권한</h2>
+  <p class="sub">토큰이 셋이고 수명이 다 다르다. 짧을수록 좁다.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>무엇</th><th class="m">수명</th><th>범위</th><th>왜</th></tr></thead>
+      <tbody>
+        <tr><td>액세스 토큰</td><td class="m">1시간</td><td>계정 전체</td><td>HS256 · Worker 와 Cloud Run 이 같은 비밀키를 쓴다</td></tr>
+        <tr><td>리프레시 토큰</td><td class="m">30일</td><td>재발급만</td><td><code>v2.sessions</code> 에 저장 — 로그아웃·비밀번호 변경 때 무효화된다</td></tr>
+        <tr><td>재생 티켓</td><td class="m">10분</td><td><strong>녹음 하나</strong></td><td><code>&lt;audio src&gt;</code> 는 헤더를 못 붙인다. 액세스 토큰을 URL 에 실으면 그동안 계정이 열린다</td></tr>
+        <tr><td>로그인 제한</td><td class="m">최대 15분</td><td>이메일 + IP 각각</td><td>5회부터 지연. 계정을 잠그지 않는다 — 남의 이메일로 그 사람을 막을 수 있다</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>데이터 모델</h2>
+  <p class="sub">스키마 <code>v2</code> 안에 테이블 13개. 마이그레이션 13개가 순서대로 쌓아 올린 것이다.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th class="m">번호</th><th>무엇을 더했나</th><th>남긴 것</th></tr></thead>
+      <tbody>
+        <tr><td class="m">001</td><td>기본 스키마</td><td>users · customers · meetings · analysis_results · action_items · emails · learning_cases · user_scores · notifications · sessions</td></tr>
+        <tr><td class="m">002</td><td>관리자와 역할</td><td>role 컬럼 · 초기 계정</td></tr>
+        <tr><td class="m">003</td><td>v1 형식 리포트</td><td>리포트 컬럼</td></tr>
+        <tr><td class="m">004</td><td>녹음 분리 보관</td><td>meeting_recordings</td></tr>
+        <tr><td class="m">005</td><td>코칭 스코어카드</td><td>점수 컬럼</td></tr>
+        <tr><td class="m">006</td><td>분석 실패 진단</td><td>analysis_error · analysis_stage</td></tr>
+        <tr><td class="m">007</td><td>액션 완료 체크</td><td>action_items_done</td></tr>
+        <tr><td class="m">008</td><td>본인 목소리 등록</td><td>voice_ref (JSONB)</td></tr>
+        <tr><td class="m">009</td><td>미팅노트</td><td>note · note_generated_at</td></tr>
+        <tr><td class="m">010</td><td>전사 상태 분리</td><td>transcribe_status · tries · error</td></tr>
+        <tr><td class="m">011</td><td>녹취 편집</td><td>content_original · edited_at</td></tr>
+        <tr><td class="m">012</td><td>세그먼트 ↔ 녹음 연결</td><td>transcript_segments.recording_id</td></tr>
+        <tr><td class="m">013</td><td>로그인 시도 제한</td><td>login_throttle</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>운영 자동화</h2>
+  <p class="sub">GitHub Actions 다섯, 명령줄 도구 아홉.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>워크플로</th><th class="m">주기</th><th>하는 일</th><th>상태</th></tr></thead>
+      <tbody>
+        <tr><td><code>deploy</code></td><td class="m">수동</td><td>타입 검사 → 빌드 → Worker → 웹 → <strong>번들 이름 대조</strong> → 태그</td><td><span class="tag tag-e">정상</span></td></tr>
+        <tr><td><code>health</code></td><td class="m">매시간</td><td>화면 · API · 스트림 · 인증 · DB · 밀린 전사</td><td><span class="tag tag-e">정상</span></td></tr>
+        <tr><td><code>db</code></td><td class="m">수동</td><td><code>status</code> · <code>audit</code> · <code>migrate</code> — 접속 문자열은 로컬에 없다</td><td><span class="tag tag-e">정상</span></td></tr>
+        <tr><td><code>r2-backup</code></td><td class="m">6시간</td><td>두 버킷 대조 후 사본 · 잠금</td><td><span class="tag tag-x">실패 중</span></td></tr>
+        <tr><td><code>restore-drill</code></td><td class="m">꺼둠</td><td>덤프를 일회용 Postgres 에 되살려 건수 확인</td><td><span class="tag tag-d">중단</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note" style="margin-top:20px">
+    <p><b>번들 이름 대조가 배포의 마지막 단계다.</b> 2026-08-12 에 <code>db push</code> 만 성공하고
+    타입 검사가 실패해 프론트가 하루 동안 배포되지 않은 채였다. 그래서 배포는 올라간 번들
+    이름이 5분 안에 바뀌는 것까지 본 뒤에야 끝난다.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2>지금 알려진 문제</h2>
+  <p class="sub">구현돼 있지만 고장난 것. 코드로 확인한 것만 적는다.</p>
+  <div class="tablewrap" style="max-width:none">
+    <table>
+      <thead><tr><th>무엇</th><th>증상</th></tr></thead>
+      <tbody>
+        <tr><td>구간별 화자 ID 충돌</td><td>조각마다 화자 번호가 새로 매겨지는데 합칠 때 이름표만 본다 — 다른 사람이 한 사람이 된다</td></tr>
+        <tr><td>전사 폴백이 조용하다</td><td>화자 분리가 실패해 whisper 로 떨어져도 결과는 정상처럼 돌아온다</td></tr>
+        <tr><td>5xx 재시도 비대칭</td><td>4xx 는 다시 시도하는데 5xx·타임아웃은 한 번에 포기한다. Workflow 재시도도 안 걸린다</td></tr>
+        <tr><td><code>transcribe_tries</code> 리셋 없음</td><td>세 번 실패하면 영구히 전사 불가. 다시 시킬 경로가 없다</td></tr>
+        <tr><td>등록 목소리 매칭</td><td>실측 556개 중 5개에만 붙었다</td></tr>
+        <tr><td>R2 백업 401</td><td>토큰이 <code>Object</code> 범위라 REST API 가 거절한다</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  코드에서 뽑음 · worker/src 3,912줄 · stream-service/src 278줄 · backend/src 4,046줄 · database 1,141줄<br>
+  SEP v2.0 · 2026-08-21
+</footer>
+
+</div>
+</body>
+</html>

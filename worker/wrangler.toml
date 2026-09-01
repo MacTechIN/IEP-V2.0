@@ -1,0 +1,53 @@
+# LEP (Lawyer's Enablement Platform) — SEP v2 를 v2.18.0(df4ba6e) 에서 포크했다.
+#
+# **여기 있는 이름·id 는 전부 LEP 전용이어야 한다.** SEP v2 의 것(sep-v2-*,
+# Hyperdrive 28586072...)을 그대로 두면 `wrangler deploy` 한 번에 운영 중인
+# SEP 를 덮어쓴다 — 그래서 포크 첫 커밋에서 전부 바꾸거나 뺐다.
+# 새 자원 만들기는 docs/2026-08-25-lep-fork-provisioning.md 순서대로 한다.
+
+name = "iep-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+# pg 는 node:net 등을 쓴다. Workers 에서 Postgres 에 붙으려면 이 플래그가 필요하다.
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[vars]
+
+# 전사 언어. **비우면 모델이 요청마다 스스로 고른다** — 2026-08-20 에 그 때문에
+# 한국어 회의가 영어로 전사됐다. 영어 낱말이 섞인 한국어가 가장 잘 넘어간다.
+OPENAI_STT_LANGUAGE = "ko"
+# SPA 오리진. LEP 의 Pages 배포 주소를 넣는다. 여기 없는 오리진에는 CORS 헤더를 주지 않는다.
+ALLOWED_ORIGINS = "https://iep-web.pages.dev,http://localhost:5173"
+
+# Neon 앞에 서서 연결을 재사용한다. 코드가 이걸 먼저 보고, 없으면 DATABASE_URL 로 떨어진다.
+# **LEP 의 Neon 프로젝트를 새로 만들고 그 Hyperdrive id 를 넣기 전까지는 비워 둔다** —
+# SEP 의 id 를 두면 두 제품이 한 DB 를 쓰게 된다. 그전에는 DATABASE_URL 시크릿으로 붙는다.
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "(LEP 용 Hyperdrive 를 만들고 넣는다)"
+
+# 업로드 오디오. LEP 전용 버킷 — 만들기 전에는 배포가 여기서 멈추는 것이 정상이다.
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "iep-uploads"
+
+# 분석 파이프라인. 각 단계가 독립적으로 재시도되므로, 리포트에서 실패해도 전사를 다시 하지 않는다.
+[[workflows]]
+name = "iep-analysis"
+binding = "ANALYSIS"
+class_name = "AnalysisWorkflow"
+
+# 녹음 하나의 전사. 업로드 요청과 분리돼 서버에서 따로 돈다 (SEP 2026-08-11 의 교훈 그대로).
+[[workflows]]
+name = "iep-transcribe"
+binding = "TRANSCRIBE"
+class_name = "TranscribeWorkflow"
+
+# SEP 에 있던 StreamGateway DO 마이그레이션(v1 생성 → v2 삭제)은 가져오지 않았다 —
+# 새 Worker 는 그 클래스를 가진 적이 없으므로 재생할 이력도 없어야 한다.
+
+# 로그 보관. **동작에는 영향이 없다** — 사고 뒤에 조회할 수 있는 유일한 기록이다.
+[observability]
+enabled = true
+head_sampling_rate = 1

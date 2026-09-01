@@ -1,0 +1,34 @@
+{
+  "name": "@iep/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "type-check": "tsc --noEmit",
+    "logs": "./tools/logs.sh live",
+    "logs:errors": "./tools/logs.sh errors",
+    "logs:upload": "./tools/logs.sh live upload",
+    "test:transcript": "node tools/transcript-quality.test.mjs",
+    "test:speakers": "node tools/speaker-merge.test.mjs",
+    "test:pii": "node tools/pii.test.mjs",
+    "test:migrate": "node tools/db-migrate.test.mjs",
+    "test:costs": "node tools/costs.test.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.6.14",
+    "jose": "^6.2.8",
+    "pg": "^8.13.1",
+    "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.120.0",
+    "esbuild": "^0.28.1"
+  }
+}

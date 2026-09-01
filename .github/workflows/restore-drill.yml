@@ -1,0 +1,297 @@
+# 복구 훈련 — 백업에서 실제로 되돌아오는가.
+#
+# 왜 필요한가
+#   "Neon 이 백업을 갖고 있다" 는 것과 "우리가 되돌릴 수 있다" 는 다른 말이다.
+#   지금까지 확인된 것은 앞쪽뿐이었다. 되돌려 본 적이 없으면 백업이 있다는 말은
+#   **사고가 난 뒤에 처음 시험해 보겠다**는 뜻이다.
+#
+#   그리고 진짜로 필요한 숫자는 "백업이 있다/없다" 가 아니라 **몇 분 걸리는가** 다.
+#   이 워크플로가 재는 게 그 숫자다.
+#
+# 안전
+#   · 프로덕션은 **읽기만** 한다 (pg_dump). 어떤 쓰기도 하지 않는다.
+#   · 복원은 러너 안에서만 도는 **일회용 Postgres 컨테이너**로 들어간다.
+#     실행이 끝나면 컨테이너째 사라진다.
+#   · 덤프 파일을 아티팩트로 올리지 않는다. 저장소에도 넣지 않는다.
+#     밖으로 나가는 것은 **건수·시간·해시**뿐이고 내용은 한 줄도 찍지 않는다.
+#
+# 무엇을 증명하나 — "복원이 에러 없이 끝났다" 로는 부족하다.
+#   테이블이 빈 채로 복원돼도 에러는 안 난다. 그래서 원본과 복원본의
+#   **테이블별 건수와 내용 해시**를 맞춰 본다. 하나라도 어긋나면 실패다.
+
+name: Restore drill
+
+on:
+  # 예약 실행을 걸지 않는다 (2026-08-16 결정).
+  #
+  # MVP 테스트가 끝났고, DB 복구 훈련은 하지 않기로 했다.
+  # **백업이 없어지는 것이 아니다** — Neon 의 시점 백업은 그대로 있다.
+  # 없어지는 것은 "되돌릴 수 있다는 확인" 이다.
+  #
+  # 두 번 확인해 뒀다: 2026-08-13(2,461행)·08-14(2,604행) 모두 건수와 해시까지 일치.
+  # 훈련의 값은 그 뒤의 **어긋남**을 잡는 데 있다 — Neon major 승급, 러너 이미지 변경,
+  # 스키마 성장. 다시 필요해지면 여기에 cron 을 되살리면 된다. 절차는 그대로 있다.
+  workflow_dispatch:
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  drill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # 복원 대상. 프로덕션과 아무 관계가 없다.
+      target:
+        # **원본과 같은 major 여야 한다.** 17 덤프는 16 에 들어가지 않는다.
+        # 여기가 어긋나면 훈련이 실패하는 게 아니라, 실제 복구 때 처음 알게 된다.
+        # LEP 의 Neon 은 **Postgres 18** 이다 (SEP 은 17 — 포크 때 딸려 온 값).
+        # 첫 실행에서 워크플로가 스스로 잡았다: 「pg_dump 17 로 서버 18 를 뜰 수 없습니다」.
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: drill
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 사전 점검
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL 시크릿이 없습니다."; exit 1
+          fi
+
+      - name: Postgres 클라이언트 18 설치
+        # Neon 서버가 러너 기본 클라이언트보다 새로우면 pg_dump 가 거부한다.
+        # 새 클라이언트는 옛 서버에도 붙으므로 위쪽으로 맞춘다.
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -sS -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-18
+          # apt 로 깔아도 PATH 앞쪽에 러너 기본 16 이 남아 있어 그대로 두면 16 이 잡힌다.
+          echo /usr/lib/postgresql/18/bin >> "$GITHUB_PATH"
+          /usr/lib/postgresql/18/bin/pg_dump --version
+
+      - name: 검증 질의 준비
+        run: |
+          mkdir -p /tmp/drill
+          # 테이블별 건수와 **내용 해시**. 건수만 보면 값이 뒤바뀐 복원을 통과시킨다.
+          # 렌더링이 달라지지 않도록 timezone·datestyle 을 양쪽 다 고정한다.
+          cat > /tmp/drill/verify.sql <<'SQL'
+          set timezone = 'UTC';
+          set datestyle = 'ISO, MDY';
+          set extra_float_digits = 0;
+          select c.relname
+                 || '|' || (xpath('/row/c/text()',
+                      query_to_xml(format('select count(*) as c from v2.%I', c.relname),
+                                   false, true, '')))[1]::text
+                 || '|' || coalesce((xpath('/row/c/text()',
+                      -- **`collate "C"` 를 반드시 붙인다** (2026-08-26). 정렬은 대상 DB 의 collation 을 탄다 —
+                      -- 원본(Neon)과 복원 컨테이너의 collation 이 다르면 **행이 완전히 같아도 순서가 달라져**
+                      -- 합계 해시가 갈린다. access_log 가 실제로 그렇게 「내용 불일치」 로 잡혔다 —
+                      -- 행별 해시 76개는 전부 일치했는데도. 거짓 경보가 나는 훈련은 곧 안 보게 된다.
+                      query_to_xml(format('select md5(string_agg(x::text, %L order by x::text collate "C")) as c from v2.%I x',
+                                          '', c.relname),
+                                   false, true, '')))[1]::text, 'empty')
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+           where n.nspname = 'v2' and c.relkind = 'r'
+           order by c.relname;
+          SQL
+
+          # 행만 맞으면 됐다고 할 수 없다. **함수·인덱스·제약이 빠져도 행 수는 그대로다** —
+          # 그 상태로 복원된 DB 는 데이터는 있지만 무결성이 없는, 더 나쁜 물건이다.
+          cat > /tmp/drill/objects.sql <<'SQL'
+          select 'FUNCTION|' || count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'v2'
+          union all select 'VIEW|'    || count(*) from pg_views    where schemaname = 'v2'
+          union all select 'INDEX|'   || count(*) from pg_indexes  where schemaname = 'v2'
+          union all select 'FK|'      || count(*) from pg_constraint co join pg_namespace n on n.oid = co.connamespace where n.nspname = 'v2' and co.contype = 'f'
+          union all select 'CHECK|'   || count(*) from pg_constraint co join pg_namespace n on n.oid = co.connamespace where n.nspname = 'v2' and co.contype = 'c'
+          union all select 'TRIGGER|' || count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'v2' and not t.tgisinternal
+          order by 1;
+          SQL
+
+      - name: 원본 상태 읽기 (읽기 전용)
+        id: source
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          # 풀러 주소로는 pg_dump 가 불안정하다. 직결 주소로 바꾼다.
+          DIRECT="${DATABASE_URL/-pooler./.}"
+          # 이 URL 은 sslmode=verify-full 이고 러너에는 ~/.postgresql/root.crt 가 없다.
+          # **sslmode 를 낮추지 않는다** — 그건 인증서 검증을 꺼서 통과시키는 것이고,
+          # 훈련이 실제보다 무른 조건에서 도는 셈이 된다. OS 신뢰 저장소를 쓰게 한다.
+          # LEP 의 접속 문자열은 `sslmode=require` 다 (SEP 은 verify-full 이었다).
+          # `sslrootcert=system` 과 함께 쓰면 psql 이 거부한다 —
+          #   psql: error: weak sslmode "require" may not be used with sslrootcert=system
+          # **낮추지 않고 올린다.** verify-full 로 바꿔야 훈련이 실제와 같거나 더 엄한 조건이 된다.
+          DIRECT="${DIRECT/sslmode=require/sslmode=verify-full}"
+          case "$DIRECT" in
+            *sslrootcert=*) : ;;
+            *\?*) DIRECT="$DIRECT&sslrootcert=system" ;;
+            *)    DIRECT="$DIRECT?sslrootcert=system" ;;
+          esac
+          echo "DIRECT=$DIRECT" >> "$GITHUB_ENV"
+          psql "$DIRECT" -v ON_ERROR_STOP=1 -Atq -f /tmp/drill/verify.sql  > /tmp/drill/source.txt
+          psql "$DIRECT" -v ON_ERROR_STOP=1 -Atq -f /tmp/drill/objects.sql > /tmp/drill/src_obj.txt
+          echo "원본 테이블 $(wc -l < /tmp/drill/source.txt)개"
+          sed 's/^/  /' /tmp/drill/src_obj.txt
+          psql "$DIRECT" -Atqc "select version()" | cut -c1-40
+          echo "SERVER_MAJOR=$(psql "$DIRECT" -Atqc 'show server_version' | grep -oE '^[0-9]+')" >> "$GITHUB_ENV"
+
+      - name: 백업 뜨기
+        id: dump
+        run: |
+          set -euo pipefail
+          # 버전이 어긋나면 여기서 멈춘다. pg_dump 는 자기가 거부하지만,
+          # 무엇이 무엇과 안 맞는지 한 줄로 남겨 두는 편이 다음 사람에게 낫다.
+          CLIENT=$(pg_dump --version | grep -oE '[0-9]+' | head -1)
+          echo "서버 ${SERVER_MAJOR} · pg_dump ${CLIENT} · 복원대상 $(psql "postgresql://postgres:drill@localhost:5432/postgres" -Atqc 'show server_version' | grep -oE '^[0-9]+')"
+          if [ "$CLIENT" != "$SERVER_MAJOR" ]; then
+            echo "::error::pg_dump ${CLIENT} 로 서버 ${SERVER_MAJOR} 를 뜰 수 없습니다"; exit 1
+          fi
+          START=$(date +%s)
+          # -Fc: 압축 커스텀 포맷. --no-owner/--no-privileges: Neon 롤이 로컬에 없다.
+          pg_dump "$DIRECT" --schema=v2 --no-owner --no-privileges -Fc -f /tmp/drill/dump.bin
+          echo "dump_sec=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+          echo "dump_bytes=$(stat -c%s /tmp/drill/dump.bin)" >> "$GITHUB_OUTPUT"
+          ls -lh /tmp/drill/dump.bin | awk '{print "덤프 크기 " $5}'
+
+      - name: 되돌리기
+        id: restore
+        env:
+          PGPASSWORD: drill
+        run: |
+          set -euo pipefail
+          T="postgresql://postgres@localhost:5432/postgres"
+          START=$(date +%s)
+          # 실패를 삼키지 않는다 — 에러가 하나라도 나면 그 자리에서 멈춘다.
+          pg_restore --no-owner --no-privileges --exit-on-error -d "$T" /tmp/drill/dump.bin
+          echo "restore_sec=$(( $(date +%s) - START ))" >> "$GITHUB_OUTPUT"
+
+      - name: 원본과 대조
+        id: verify
+        env:
+          PGPASSWORD: drill
+        run: |
+          set -euo pipefail
+          T="postgresql://postgres@localhost:5432/postgres"
+          psql "$T" -v ON_ERROR_STOP=1 -Atq -f /tmp/drill/verify.sql  > /tmp/drill/restored.txt
+          psql "$T" -v ON_ERROR_STOP=1 -Atq -f /tmp/drill/objects.sql > /tmp/drill/dst_obj.txt
+
+          echo "테이블            원본건수  복원건수  내용"
+          echo "------------------------------------------------"
+          BAD=0
+          python3 - <<'PY' | tee /tmp/drill/report.txt
+          def load(p):
+              d = {}
+              for line in open(p, encoding='utf-8'):
+                  line = line.strip()
+                  if not line: continue
+                  # 테이블 파일은 이름|건수|해시, 객체 파일은 이름|개수 — 필드 수가 다르다.
+                  parts = line.split('|')
+                  d[parts[0]] = tuple(parts[1:])
+              return d
+          src, dst = load('/tmp/drill/source.txt'), load('/tmp/drill/restored.txt')
+          bad = 0
+          for name in sorted(set(src) | set(dst)):
+              s = src.get(name); r = dst.get(name)
+              if s is None:   print(f"{name:<18} {'-':>8} {r[0]:>9}  원본에 없음"); bad += 1; continue
+              if r is None:   print(f"{name:<18} {s[0]:>8} {'-':>9}  **복원 안 됨**"); bad += 1; continue
+              ok = (s[0] == r[0]) and (s[1] == r[1])
+              mark = '일치' if ok else ('건수 불일치' if s[0] != r[0] else '**내용 불일치**')
+              print(f"{name:<18} {s[0]:>8} {r[0]:>9}  {mark}")
+              if not ok: bad += 1
+
+          # 행이 다 맞아도 제약이 빠졌으면 복구된 게 아니다.
+          so, ro = load('/tmp/drill/src_obj.txt'), load('/tmp/drill/dst_obj.txt')
+          print()
+          print(f"{'객체':<18} {'원본':>8} {'복원':>9}  결과")
+          for name in sorted(set(so) | set(ro)):
+              a = so.get(name, ('-',))[0]; b = ro.get(name, ('-',))[0]
+              ok = a == b
+              print(f"{name:<18} {a:>8} {b:>9}  {'일치' if ok else '**불일치**'}")
+              if not ok: bad += 1
+          print(f"__BAD__={bad}")
+          PY
+          BAD=$(grep -oP '(?<=^__BAD__=)\d+' /tmp/drill/report.txt)
+          echo "bad=$BAD" >> "$GITHUB_OUTPUT"
+          TOTAL=$(( $(wc -l < /tmp/drill/source.txt) ))
+          echo "rows=$(awk -F'|' '{s+=$2} END{print s}' /tmp/drill/source.txt)" >> "$GITHUB_OUTPUT"
+          echo "tables=$TOTAL" >> "$GITHUB_OUTPUT"
+
+      - name: 덤프 지우기
+        if: always()
+        # 러너는 어차피 사라지지만, 다음 단계에서 실수로 올리는 일이 없게 먼저 지운다.
+        run: rm -f /tmp/drill/dump.bin
+
+      - name: 기록
+        if: always()
+        run: |
+          set -euo pipefail
+          LOG=docs/health/restore-drill.log
+          mkdir -p docs/health
+          STAMP=$(date -u +'%Y-%m-%d %H:%M')
+          BAD='${{ steps.verify.outputs.bad }}'
+
+          # 셋을 구분한다. **대조까지 갔다가 어긋난 것**과 **거기 닿지도 못한 것**은
+          # 다른 사건이고, 한 글자로 뭉치면 나중에 로그만 보고는 구별할 수 없다.
+          if [ -z "$BAD" ]; then
+            VERDICT='중단'                     # 대조 전에 멈췄다
+          elif [ "$BAD" = "0" ]; then
+            VERDICT='복구됨'
+          else
+            VERDICT='불일치'
+          fi
+
+          {
+            echo "${STAMP}Z  ${VERDICT}  테이블 ${{ steps.verify.outputs.tables }}개 · 행 ${{ steps.verify.outputs.rows }}개"
+            if [ -n '${{ steps.dump.outputs.dump_sec }}' ]; then
+              echo "  백업 ${{ steps.dump.outputs.dump_sec }}초 (${{ steps.dump.outputs.dump_bytes }}바이트) · 복원 ${{ steps.restore.outputs.restore_sec }}초"
+            fi
+            [ "$VERDICT" = '중단' ]   && echo "  대조 전에 멈췄다 — 실행 기록을 볼 것"
+            [ "$VERDICT" = '불일치' ] && echo "  어긋난 테이블 ${BAD}개 — 실행 기록을 볼 것"
+            true
+          } >> "$LOG"
+          tail -3 "$LOG"
+
+          # 표는 실행 요약에만 둔다. 해시는 저장소에 남기지 않는다.
+          {
+            echo "### 복구 훈련 — ${VERDICT}"
+            echo ''
+            echo '```'
+            sed 's/^__BAD__=.*//' /tmp/drill/report.txt 2>/dev/null || echo '(대조까지 가지 못했습니다)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add "$LOG"
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(drill): 복구 훈련 ${VERDICT} ${STAMP}Z [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+
+      - name: 어긋났거나 못 갔으면 실패로
+        if: steps.verify.outputs.bad != '0'
+        run: |
+          echo "::error::복구 검증 실패 — 원본과 복원본이 다르거나 대조까지 가지 못했습니다"
+          exit 1

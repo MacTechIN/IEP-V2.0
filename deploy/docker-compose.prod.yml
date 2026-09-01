@@ -1,0 +1,95 @@
+# SEP v2 — Production stack (self-contained; deploy with --env-file .env.production)
+# Backend published on ${BACKEND_PORT:-3080}; Postgres is internal-only.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sep-v2-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/001_init_v2_schema.sql:/docker-entrypoint-initdb.d/001_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 스키마를 맞추고 끝나는 일회성 단계. 백엔드는 이게 성공해야 뜬다.
+  # 기동 중 마이그레이션을 없앤 자리다 — 실패하면 여기서 배포가 멈춘다.
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    container_name: sep-v2-migrate
+    restart: "no"
+    command: ["node", "dist/database/migrate.js"]
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # 있으면 위 개별 값 대신 이것을 쓴다 (관리형 Postgres). 비우면 사내 DB 로 돌아간다.
+      DATABASE_URL: ${DATABASE_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    container_name: sep-v2-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DATABASE_URL: ${DATABASE_URL:-}
+      JWT_SECRET: ${JWT_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # 프런트엔드가 다른 오리진(Pages)으로 분리되면 반드시 실제 주소를 넣어야 한다.
+      # '*' 는 credentials:true 와 함께 쓰면 배열 매칭에 걸리지 않아 전부 차단된다.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+    ports:
+      - "${BACKEND_PORT:-3080}:3000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Cloudflare Tunnel — 백엔드를 공개 HTTPS 호스트명으로 내보낸다.
+  # 포트포워딩도 공인 IP도 필요 없고, TLS 는 Cloudflare 가 끝낸다.
+  # 대시보드(Zero Trust → Networks → Tunnels)에서 터널을 만들고 커넥터 토큰을 받아
+  # .env.production 의 TUNNEL_TOKEN 에 넣은 뒤, 공개 호스트명을 http://backend:3000 으로 매핑한다.
+  # TUNNEL_TOKEN 이 비어 있으면 이 서비스는 뜨지 않는다 (profiles 로 막아 둔다).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: sep-v2-tunnel
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:-}
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  default:
+    name: sep-v2-network

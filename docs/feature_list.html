@@ -1,0 +1,424 @@
+<title>SEP v2 구현 기능 목록</title>
+<style>
+  :root {
+    --ground:#F3F4F7; --surface:#FFFFFF; --surface-2:#E8EAEF; --sunken:#EDEFF3;
+    --ink:#15181F; --ink-2:#474D5A; --ink-3:#6C7382;
+    --rule:#D5D9E1; --rule-2:#B5BAC6;
+    --a1:#1F5F52; --a1-soft:#E2EFEB;
+    --a2:#3E4E96; --a2-soft:#E7EAF7;
+    --a3:#8A4A1C; --a3-soft:#F8ECE1;
+    --a4:#6A3C6E; --a4-soft:#F2E9F3;
+    --mute:#5C6470; --mute-soft:#E9EBEF;
+    --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E1115; --surface:#161A21; --surface-2:#1E232C; --sunken:#12161C;
+      --ink:#E4E8EF; --ink-2:#A2AAB8; --ink-3:#79818F;
+      --rule:#262C36; --rule-2:#3A424F;
+      --a1:#63B8A5; --a1-soft:#122B26;
+      --a2:#8B99E0; --a2-soft:#1A1E3A;
+      --a3:#DB9861; --a3-soft:#2E1F12;
+      --a4:#BF95C4; --a4-soft:#291D2B;
+      --mute:#98A0AC; --mute-soft:#1D2129;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E1115; --surface:#161A21; --surface-2:#1E232C; --sunken:#12161C;
+    --ink:#E4E8EF; --ink-2:#A2AAB8; --ink-3:#79818F;
+    --rule:#262C36; --rule-2:#3A424F;
+    --a1:#63B8A5; --a1-soft:#122B26;
+    --a2:#8B99E0; --a2-soft:#1A1E3A;
+    --a3:#DB9861; --a3-soft:#2E1F12;
+    --a4:#BF95C4; --a4-soft:#291D2B;
+    --mute:#98A0AC; --mute-soft:#1D2129;
+  }
+
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--sans);
+    font-size: 15.5px; line-height: 1.68; margin: 0; padding: 0 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 66rem; margin: 0 auto; }
+
+  header { padding: 3.5rem 0 1.75rem; border-bottom: 2px solid var(--ink); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .74rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 .8rem;
+  }
+  h1 {
+    font-size: clamp(1.75rem, 4.2vw, 2.5rem); line-height: 1.18; margin: 0 0 .9rem;
+    letter-spacing: -.022em; font-weight: 700;
+  }
+  .lede { font-size: 1.05rem; color: var(--ink-2); margin: 0; max-width: 54ch; }
+
+  .tally {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 2rem 0;
+  }
+  .tally div { background: var(--surface); padding: .9rem 1rem; }
+  .tally .n {
+    font-family: var(--mono); font-size: 1.55rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1.1; display: block;
+  }
+  .tally .k {
+    font-size: .72rem; letter-spacing: .05em; color: var(--ink-3);
+    margin-top: .25rem; display: block;
+  }
+
+  section { margin: 3rem 0; }
+  h2 {
+    font-size: 1.3rem; margin: 0 0 1rem; font-weight: 700; letter-spacing: -.01em;
+    display: flex; align-items: baseline; gap: .7rem;
+  }
+  h2 .c {
+    font-family: var(--mono); font-size: .7rem; font-weight: 700;
+    padding: .18rem .5rem; border-radius: 2px; flex: none;
+  }
+  .g1 h2 .c { background: var(--a1-soft); color: var(--a1); }
+  .g2 h2 .c { background: var(--a2-soft); color: var(--a2); }
+  .g3 h2 .c { background: var(--a3-soft); color: var(--a3); }
+  .g4 h2 .c { background: var(--a4-soft); color: var(--a4); }
+  .g5 h2 .c { background: var(--mute-soft); color: var(--mute); }
+  h3 { font-size: .98rem; margin: 1.6rem 0 .6rem; font-weight: 700; color: var(--ink-2); }
+  p { margin: 0 0 .9rem; max-width: 68ch; }
+  .note { color: var(--ink-2); font-size: .92rem; }
+  code {
+    font-family: var(--mono); font-size: .85em;
+    background: var(--surface-2); padding: .1em .35em; border-radius: 2px;
+  }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: .9rem; }
+  th, td { text-align: left; padding: .6rem .85rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-size: .66rem; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+    font-weight: 600; border-bottom: 1px solid var(--rule-2); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.m { font-family: var(--mono); font-size: .84em; white-space: nowrap; }
+  td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .verb {
+    display: inline-block; font-family: var(--mono); font-size: .66rem; font-weight: 700;
+    padding: .1rem .35rem; border-radius: 2px; margin-right: .35rem; min-width: 3.1rem;
+    text-align: center;
+  }
+  .verb.get { background: var(--a1-soft); color: var(--a1); }
+  .verb.post { background: var(--a2-soft); color: var(--a2); }
+  .verb.patch { background: var(--a3-soft); color: var(--a3); }
+  .verb.delete { background: var(--a4-soft); color: var(--a4); }
+
+  ul { margin: 0 0 .9rem; padding-left: 1.2rem; max-width: 68ch; }
+  li { margin-bottom: .35rem; }
+  li::marker { color: var(--ink-3); }
+
+  .callout {
+    background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--ink-3);
+    padding: .95rem 1.15rem; margin: 1.3rem 0;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .h { font-weight: 700; display: block; margin-bottom: .25rem; }
+
+  footer {
+    margin-top: 3.5rem; padding-top: 1.4rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: .74rem; color: var(--ink-3); line-height: 1.8;
+  }
+  @media (max-width: 40rem) { header { padding-top: 2.25rem; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">SEP v2.1.0 · 2026-08-12</p>
+  <h1>구현 기능 목록</h1>
+  <p class="lede">코드에서 직접 뽑은 것입니다 — 라우트 파일, 스키마, 프로덕션 DB 컬럼. 계획이 아니라 지금 돌고 있는 것입니다.</p>
+</header>
+
+<div class="tally">
+  <div><span class="n">46</span><span class="k">API 엔드포인트</span></div>
+  <div><span class="n">8</span><span class="k">화면</span></div>
+  <div><span class="n">12</span><span class="k">DB 테이블</span></div>
+  <div><span class="n">18</span><span class="k">분석 산출물</span></div>
+  <div><span class="n">2</span><span class="k">Workflow</span></div>
+  <div><span class="n">10</span><span class="k">마이그레이션</span></div>
+</div>
+
+<section class="g1">
+  <h2><span class="c">A</span>인증 · 계정</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb post">POST</span>/auth/login</td><td>로그인 — 액세스·리프레시 토큰 발급</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/auth/refresh</td><td>토큰 갱신 (단일 요청 보장, 무한 재귀 차단)</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/auth/logout</td><td>로그아웃 — 세션 무효화</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/auth/change-password</td><td>비밀번호 변경 (최소 9자)</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/me</td><td>현재 사용자</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/users/me</td><td>프로필 조회</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/users/me</td><td>프로필 수정 (이름·부서·목표·연락처·소개)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>딸린 것</h3>
+  <ul>
+    <li><strong>역할 기반 접근</strong> — <code>requireAuth</code> · <code>requireAdmin</code> 미들웨어</li>
+    <li><strong>녹음 중 세션 만료 보호</strong> — 화면을 옮기지 않고 배너만 표시, 녹음 계속</li>
+    <li><strong>CORS 오리진 제한</strong> — 허용 목록에 없으면 헤더를 주지 않음</li>
+    <li><strong>시드 비밀번호 제거</strong> — 마이그레이션에 있던 <code>admin1234</code>·<code>password123</code> 을 난수 해시로</li>
+  </ul>
+</section>
+
+<section class="g1">
+  <h2><span class="c">B</span>녹음 · 업로드</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb post">POST</span>/recordings</td><td>녹음 업로드 (R2 저장 + 행 생성, <strong>전사는 비동기</strong>)</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/recordings/drafts</td><td>미첨부 녹음 목록 + 전사 상태</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/recordings/:id</td><td>라벨 수정 · 분석 대상 선택/해제</td></tr>
+      <tr><td class="m"><span class="verb delete">DELETE</span>/recordings/:id</td><td>삭제 (R2 객체도 함께)</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/meetings/:id/audio</td><td>미팅에 오디오 직접 업로드 (레거시 경로)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>브라우저 쪽</h3>
+  <ul>
+    <li><strong>인앱 녹음</strong> — 시작 · 일시정지 · 재개 · 완료</li>
+    <li><strong>파일 추가</strong> — 여러 개, 녹음과 섞어서 가능</li>
+    <li><strong>자동 분할</strong> (<code>audioChunks.ts</code>) — STT 입력 한도(23분 20초)를 넘는 오디오를 조각으로</li>
+    <li><strong>15초 백업</strong> (<code>recordingBackup.ts</code>) — IndexedDB. 브라우저가 죽어도 최악 손실 15초</li>
+    <li><strong>세션 복구</strong> — 다음 방문 시 못 올린 녹음을 찾아 다시 올릴 수 있음</li>
+    <li><strong>순차 업로드 큐</strong> — 동시 전송으로 서로 밀리던 것을 하나씩</li>
+    <li><strong>탭 이탈 경고</strong> — 녹음 중 창을 닫으려 하면 확인</li>
+    <li><strong>무음 마이크 감지</strong> — 소리가 안 잡히면 알림</li>
+    <li><strong>동의 기록</strong> — 녹음 전 고지·동의 확인. 켠 기능에 따라 문구가 달라짐</li>
+  </ul>
+</section>
+
+<section class="g2">
+  <h2><span class="c">C</span>전사 · 분석</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb post">POST</span>/meetings/:id/analyze</td><td>선택한 녹음으로 분석 시작</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/analysis/meeting/:id</td><td>분석 결과 + 진행률</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/analysis/meeting/:id/transcript</td><td>화자별 녹취</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/analysis/meeting/:id/action-items</td><td>후속 조치 체크 (재분석해도 보존)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Workflow 2종 (Cloudflare Workflows · 단계별 재시도)</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>이름</th><th>단계</th></tr></thead>
+    <tbody>
+      <tr><td class="m">TranscribeWorkflow</td><td>녹음 하나를 전사. <code>transcribe_status</code> 로 중복 STT 차단, 20분 지난 잠금은 회수</td></tr>
+      <tr><td class="m">AnalysisWorkflow</td><td>전사 확인 → 전사 → 화자 역할 → 기본 분석 → 리포트·코칭 → 완료</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>분석 산출물 18종 (<code>analysis_results</code> 컬럼)</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>구분</th><th>항목</th></tr></thead>
+    <tbody>
+      <tr><td>요약</td><td class="m">summary · key_points · meeting_note</td></tr>
+      <tr><td>고객 이해</td><td class="m">customer_needs · interests · concerns</td></tr>
+      <tr><td>거래</td><td class="m">deal_signals · scores · overall_confidence</td></tr>
+      <tr><td>감정</td><td class="m">sentiment · sentiment_score · psych_insights</td></tr>
+      <tr><td>실행</td><td class="m">action_items · action_items_done · follow_up_draft</td></tr>
+      <tr><td>코칭</td><td class="m">coaching · scorecard</td></tr>
+      <tr><td>지표</td><td class="m">talk_metrics · speaker_roles</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>전사 관련 기능</h3>
+  <ul>
+    <li><strong>화자 분리</strong> — <code>gpt-4o-transcribe-diarize</code>, 실패 시 <code>whisper-1</code> 로 폴백</li>
+    <li><strong>본인 목소리 등록</strong> — 8초 클립으로 내 발화에 실명 표기</li>
+    <li><strong>화자 역할 판정</strong> — 영업대표 / 고객 등을 LLM 이 추정</li>
+    <li><strong>미팅 노트</strong> — 클로바노트 형식. 녹취 전체를 구간별로 나눠 요약(자르지 않음)</li>
+    <li><strong>발화 지표</strong> — 역할별 발화수·턴·질문·발화시간·비율·WPM (코드 계산, LLM 아님)</li>
+    <li><strong>이전 미팅 맥락</strong> — 같은 고객사의 직전 2건 요약을 함께 전달</li>
+  </ul>
+</section>
+
+<section class="g3">
+  <h2><span class="c">D</span>실시간 기능 (선택제, 기본 꺼짐)</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>기능</th><th>구성</th><th>산출</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>실시간 코칭</strong><br><span class="note">25초 주기</span></td>
+        <td class="m"><span class="verb post">POST</span>/risk<br>whisper-1 + gpt-4o-mini</td>
+        <td>위험 등급 4종 · 근거 · 추천 멘트 · 권장 행동</td>
+      </tr>
+      <tr>
+        <td><strong>실시간 자막</strong><br><span class="note">끊김 없음</span></td>
+        <td class="m">Cloud Run 게이트웨이<br>Deepgram nova-2</td>
+        <td>임시/확정 구분 · 화자 라벨 · 자동 스크롤</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li><strong>등급 히스테리시스</strong> — 위험은 2회 연속일 때만 승격, 단발은 주의로 완충</li>
+    <li><strong>백업 엔진</strong> — Deepgram 실패 시 Google STT 자동 전환, 5분 한계 회피 위해 4분마다 회전</li>
+    <li><strong>PCM 변환</strong> (<code>liveTranscript.ts</code>) — AudioWorklet 으로 16kHz linear16 생성, 100ms 프레임</li>
+    <li><strong>선택 기억</strong> — localStorage. 녹음 중에도 끄고 켤 수 있음</li>
+    <li>둘 다 녹음과 독립 — 끊겨도 녹음은 계속</li>
+  </ul>
+  <p class="note">상세는 <code>docs/realtime_cauchingandstt.html</code>, 엔진 선택 근거는 <code>docs/2026-08-12-stt-engine-benchmark.md</code>.</p>
+</section>
+
+<section class="g2">
+  <h2><span class="c">E</span>미팅 · 고객 · 후속 조치</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb post">POST</span>/meetings</td><td>미팅 생성</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/meetings</td><td>목록 (관리자는 전체, 일반은 본인)</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/meetings/:id</td><td>상세</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/meetings/:id</td><td>수정</td></tr>
+      <tr><td class="m"><span class="verb delete">DELETE</span>/meetings/:id</td><td>삭제 (소프트, 오디오 전부 정리)</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/customers</td><td>고객사 목록</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/customers</td><td>고객사 생성</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/customers/:id</td><td>고객사 상세</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/customers/:id</td><td>수정</td></tr>
+      <tr><td class="m"><span class="verb delete">DELETE</span>/customers/:id</td><td>삭제</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/actions</td><td>후속 조치 목록</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/actions</td><td>생성</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/actions/:id</td><td>수정 · 완료 처리</td></tr>
+      <tr><td class="m"><span class="verb delete">DELETE</span>/actions/:id</td><td>삭제</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="g2">
+  <h2><span class="c">F</span>대시보드 · 분석 지표</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb get">GET</span>/dashboard/home/me</td><td>홈 요약 — 최근 미팅·진행 상황</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/dashboard/score/me</td><td>내 점수</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/dashboard/insights/me</td><td>인사이트</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/analytics/summary</td><td>집계 요약</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/analytics/trends</td><td>추세</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="g4">
+  <h2><span class="c">G</span>관리자</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb get">GET</span>/admin/users</td><td>사용자 목록</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/admin/users</td><td>사용자 생성</td></tr>
+      <tr><td class="m"><span class="verb patch">PATCH</span>/admin/users/:id</td><td>역할·활성 상태 변경</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/users/me/voice</td><td>목소리 등록 (2~10초)</td></tr>
+      <tr><td class="m"><span class="verb delete">DELETE</span>/users/me/voice</td><td>등록 해제</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="g1">
+  <h2><span class="c">H</span>화면 8종</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>화면</th><th>내용</th></tr></thead>
+    <tbody>
+      <tr><td class="m">LoginPage</td><td>로그인</td></tr>
+      <tr><td class="m">HomePage</td><td>홈 — 요약과 바로가기</td></tr>
+      <tr><td class="m">UploadPage</td><td>녹음 · 업로드 · 실시간 코칭/자막 · 미팅 정보 입력</td></tr>
+      <tr><td class="m">MeetingListPage</td><td>미팅 목록</td></tr>
+      <tr><td class="m">MeetingDetailPage</td><td>분석 결과 — <strong>리포트 / 지표 / 녹취</strong> 3탭</td></tr>
+      <tr><td class="m">DashboardPage</td><td>대시보드 · 추세</td></tr>
+      <tr><td class="m">ProfilePage</td><td>프로필 · 목소리 등록 · 비밀번호</td></tr>
+      <tr><td class="m">AdminUsersPage</td><td>사용자 관리 (관리자)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>녹취 탭의 처리</h3>
+  <ul>
+    <li><strong>맞장구 접기</strong> — 10자 이하 짧은 발화를 접어 화면을 짧게</li>
+    <li><strong>화자 필터</strong> — 특정 화자만 보기</li>
+    <li><strong>검색</strong> — 녹취 안에서 찾기</li>
+    <li><strong>3초 폴링</strong> — 분석 진행 중 자동 갱신 (완료/실패 시 중지)</li>
+  </ul>
+  <p class="note">공용 UI 프리미티브 5종: <code>Button</code> · <code>Input</code> · <code>Card</code> · <code>Badge</code> · <code>ListItem</code></p>
+</section>
+
+<section class="g5">
+  <h2><span class="c">I</span>데이터 · 인프라</h2>
+  <h3>DB 테이블 12종 (Neon Postgres, <code>v2</code> 스키마)</h3>
+  <p class="note"><code>users</code> · <code>customers</code> · <code>meetings</code> · <code>meeting_recordings</code> · <code>analysis_results</code> · <code>transcript_segments</code> · <code>action_items</code> · <code>user_scores</code> · <code>notifications</code> · <code>sessions</code> · <code>emails</code> · <code>learning_cases</code></p>
+
+  <h3>구성</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>계층</th><th>무엇</th></tr></thead>
+    <tbody>
+      <tr><td>화면</td><td class="m">Cloudflare Pages — sep-v2-web.pages.dev</td></tr>
+      <tr><td>API</td><td class="m">Cloudflare Workers + Hyperdrive</td></tr>
+      <tr><td>DB</td><td class="m">Neon Postgres (ap-southeast-1)</td></tr>
+      <tr><td>파일</td><td class="m">Cloudflare R2 — sep-v2-uploads</td></tr>
+      <tr><td>비동기</td><td class="m">Cloudflare Workflows × 2</td></tr>
+      <tr><td>실시간</td><td class="m">Google Cloud Run (asia-northeast3)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="g5">
+  <h2><span class="c">J</span>운영 도구</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>도구</th><th>하는 일</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Actions · DB 워크플로</td><td><code>status</code> / <code>audit</code> / <code>migrate</code> — 사내 서버 없이</td></tr>
+      <tr><td class="m">db-status.js</td><td>행 수 · 적용된 마이그레이션 · 전사 적체</td></tr>
+      <tr><td class="m">db-migrate.js</td><td>한 파일을 한 트랜잭션으로 적용</td></tr>
+      <tr><td class="m">r2-audit.js</td><td>파일 ↔ DB 양방향 대조. <strong>보고만 하고 지우지 않음</strong></td></tr>
+      <tr><td class="m">logs.sh</td><td><code>wrangler tail</code> 래퍼 — live / errors / upload</td></tr>
+      <tr><td class="m">구조화 로그</td><td><code>ev=… rid=…</code> · 요청 단위로 묶임 · Workers Logs 보관</td></tr>
+      <tr><td class="m">/_probe/*</td><td>DB · R2 도달 확인 (비밀 헤더 필요)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="g5">
+  <h2><span class="c">K</span>진단 · 내부 엔드포인트</h2>
+  <p class="note">사람이 쓰는 화면에는 없습니다. 살아 있는지 확인하고 문제를 짚는 용도입니다.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>엔드포인트</th><th>기능</th><th>보호</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="verb get">GET</span>/health</td><td>Worker 가 살아 있는가</td><td>공개</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/admin/_ping</td><td>관리자 권한 확인</td><td>관리자</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/_probe/db</td><td>DB 도달 · 지연</td><td class="m">x-probe-secret</td></tr>
+      <tr><td class="m"><span class="verb get">GET</span>/_probe/r2</td><td>R2 도달 · 객체 수 · 읽기 가능 여부</td><td class="m">x-probe-secret</td></tr>
+      <tr><td class="m"><span class="verb post">POST</span>/_probe/analyze-audio</td><td>분석 Workflow 직접 기동 (검증용)</td><td class="m">x-probe-secret</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">스트림 게이트웨이(Cloud Run)에도 <code>GET /health</code> 가 따로 있습니다.</p>
+</section>
+
+<section class="g5">
+  <h2><span class="c">L</span>안전장치</h2>
+  <ul>
+    <li><strong>중복 STT 차단</strong> — 조건부 update 잠금. 실측 동시 8개 중 1개만 통과</li>
+    <li><strong>죽은 잠금 회수</strong> — 20분 지난 <code>processing</code> 은 죽은 것으로 간주</li>
+    <li><strong>분석 전 전사 대기</strong> — 전사 미완 상태로 "제목만 분석" 되는 것을 방지</li>
+    <li><strong>미팅 삭제 시 오디오 전부 정리</strong> — 원본 + 조각. 접두어로 찾음</li>
+    <li><strong>고정 키 재업로드</strong> — 확장자가 바뀌어도 옛 파일을 남기지 않음</li>
+    <li><strong>소프트 삭제</strong> — <code>deleted_at</code>. 복원 가능</li>
+    <li><strong>실시간 루프 세대 가드</strong> — 껐다 켜도 루프가 둘로 늘지 않음</li>
+    <li><strong>업로드 메모리 절감</strong> — File 을 그대로 R2 로 (Worker 한도 128MB)</li>
+  </ul>
+
+  <div class="callout">
+    <span class="h">아직 없는 것 (중요)</span>
+    <p><strong>사용량 상한이 없습니다.</strong> v1 에는 있는데(일 20회/사용자, 50회/조직) v2 에는 아직입니다.
+    STT 는 20분 오디오당 약 $1.27 이라, 분석 버튼을 반복해 누르는 것만으로 비용이 쌓입니다.
+    상용 전 1순위입니다 — <code>docs/develop_plan.html</code> 2단계.</p>
+  </div>
+</section>
+
+<footer>
+  SEP v2.1.0 · 2026-08-12 · MacTechIN/SEP-V2.0<br>
+  코드에서 추출: worker/src/routes · database/*.sql · 프로덕션 information_schema<br>
+  함께 보기 — develop_plan.html (남은 것) · realtime_cauchingandstt.html (실시간 상세)
+</footer>
+
+</div>

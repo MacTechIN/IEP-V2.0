@@ -1,0 +1,183 @@
+# 배포 — Worker 와 웹을 **함께** 올리고, 올라간 것을 확인하고, 태그를 붙인다.
+#
+# 왜 Actions 인가 (2026-08-30)
+#   배포가 워크스테이션에 매여 있으면 두 가지가 샌다.
+#   1. **Cloudflare 토큰이 매번 셸·세션 기록에 남는다.** 2026-08-29 에 토큰을
+#      회전했는데, 같은 날 그 배포 과정에서 토큰이 세션 기록에 454회 다시 들어갔다.
+#      회전은 노출된 값을 죽일 뿐, 노출되는 구조는 그대로다 — 그래서 또 회전해야 한다.
+#      여기로 옮기면 토큰은 GitHub Secrets(쓰기 전용)에만 있고 손을 안 거친다.
+#   2. wrangler 로그인이 깨진 날 배포도 같이 막힌다. SEP 가 2026-08-14 에 그랬다.
+#
+# 왜 자동이 아니라 수동인가
+#   지금 이 사이트로 다른 사람들이 테스트한다. main 에 푸시할 때마다 올라가면
+#   반쯤 된 것이 테스터 화면에 뜬다. 배포는 고르는 행동이어야 한다.
+#
+# **제일 중요한 단계는 마지막 확인이다.**
+#   배포 명령의 성공은 "요청이 받아들여졌다" 는 뜻일 뿐, 그 번들이 실제로
+#   서비스되는지는 별개다. 올라간 번들 이름이 방금 빌드한 것과 같아질 때까지
+#   확인하고, 안 되면 실패한다. SEP CLAUDE.md 의 2026-08-12 사고와 같은 대비다.
+#
+# stream-service 는 여기서 안 올린다 — Cloud Run(GCP)이라 배포 통로가 다르다.
+#
+# 준비 — 저장소 Settings → Secrets and variables → Actions
+#   CLOUDFLARE_PAGES_TOKEN   `Cloudflare Pages: Edit` + `Workers Scripts: Edit`
+#                            **백업용 R2 토큰(R2_ACCESS_KEY_ID 등)과 섞지 않는다.**
+#   CF_ACCOUNT_ID            (이미 있다)
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '배포 확인되면 v<버전> 태그를 붙인다'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  PROJECT: iep-web
+  SITE: https://iep-web.pages.dev
+  API: https://iep-api.wooriszhome.workers.dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 태그를 붙이려면 전체 이력이 필요하다
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: 사전 점검
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          ACCT: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ACCT" ]; then
+            {
+              echo "::error::CLOUDFLARE_PAGES_TOKEN·CF_ACCOUNT_ID 가 필요합니다."
+              echo "토큰은 'Cloudflare Pages: Edit' + 'Workers Scripts: Edit' 권한으로 새로 만드세요."
+              echo "백업용 R2 토큰을 재사용하지 마세요 — 권한이 다르고, 섞으면 유출 시 피해가 커집니다."
+            } >&2
+            exit 1
+          fi
+
+      - name: 배포 전 상태
+        id: before
+        run: |
+          set -euo pipefail
+          BEFORE=$(curl -s "$SITE/?cb=$GITHUB_RUN_ID" | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+          echo "before=$BEFORE" >> "$GITHUB_OUTPUT"
+          echo "지금 올라가 있는 번들: ${BEFORE:-(못 읽음)}"
+
+      - name: 타입 검사
+        # **여기서 막는 것이 이 워크플로의 절반이다.**
+        # tsc 가 깨진 채로 배포 명령만 성공하면, 옛 번들이 그대로 남아 있는데
+        # 배포했다고 믿게 된다.
+        run: |
+          set -euo pipefail
+          inst() { [ -f package-lock.json ] && npm ci --no-audit --no-fund --silent \
+                                           || npm install --no-audit --no-fund --silent; }
+          (cd worker && inst && npx tsc --noEmit)
+          (cd frontend/web && inst && npx tsc --noEmit)
+
+      - name: 빌드
+        id: build
+        run: |
+          set -euo pipefail
+          cd frontend/web
+          # `npm run build` 는 localhost 를 가리키는 번들을 만든다. 반드시 build:prod.
+          npm run build:prod
+          # LEP 고유 — 번들에 API·자막 주소가 박혔는지 본다 (2026-08-26 사고 대비).
+          node tools/check-bundle.mjs
+          BUNDLE=$(ls dist/assets | grep -oE '^index-[A-Za-z0-9_-]+\.js$' | head -1)
+          [ -n "$BUNDLE" ] || { echo "::error::번들을 못 찾았습니다"; exit 1; }
+          echo "bundle=$BUNDLE" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "빌드한 번들: $BUNDLE"
+
+      - name: Worker 올리기
+        # **웹보다 먼저.** 화면이 새 API 를 부르는데 API 가 옛것이면 그 사이가 고장이다.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          cd worker && npx wrangler@4 deploy
+
+      - name: Worker 확인
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 12); do
+            curl -sf "$API/health" > /dev/null && exit 0
+            sleep 5
+          done
+          echo "::error::Worker /health 가 응답하지 않습니다"; exit 1
+
+      - name: 웹 올리기
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          cd frontend/web
+          npx wrangler@4 pages deploy dist --project-name "$PROJECT" --branch main
+
+      - name: 정말 올라갔는지 확인
+        id: verify
+        # 배포 명령의 성공은 "요청이 받아들여졌다" 는 뜻이다. 실제로 그 번들이
+        # 서비스되는지는 별개이고, 그 둘을 같다고 보면 옛 화면이 그대로 남는다.
+        run: |
+          set -euo pipefail
+          WANT='${{ steps.build.outputs.bundle }}'
+          for i in $(seq 1 30); do
+            LIVE=$(curl -s "$SITE/?cb=$GITHUB_RUN_ID-$i" | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+            if [ "$LIVE" = "$WANT" ]; then
+              echo "확인: $LIVE"
+              echo "live=$LIVE" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::5분을 기다려도 $WANT 가 서비스되지 않습니다 (지금 ${LIVE:-?})"
+          exit 1
+
+      - name: 태그
+        if: inputs.tag
+        # CLAUDE.md — 버전·CHANGELOG·태그는 한 묶음이다. **확인이 끝난 뒤에 붙인다.**
+        run: |
+          set -euo pipefail
+          V='v${{ steps.build.outputs.version }}'
+          if git rev-parse "$V" >/dev/null 2>&1; then
+            echo "$V 태그가 이미 있습니다 — 그대로 둡니다"; exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -a "$V" -m "$V — 배포 확인 ${{ steps.verify.outputs.live }}"
+          git push origin "$V"
+          echo "$V 태그를 붙였습니다"
+
+      - name: 요약
+        if: always()
+        run: |
+          {
+            echo "### 배포"
+            echo ''
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 배포 전 | \`${{ steps.before.outputs.before }}\` |"
+            echo "| 빌드 | \`${{ steps.build.outputs.bundle }}\` |"
+            echo "| 확인됨 | \`${{ steps.verify.outputs.live }}\` |"
+            echo "| 버전 | \`${{ steps.build.outputs.version }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

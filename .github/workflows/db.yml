@@ -1,0 +1,89 @@
+# DB 작업의 유일한 통로 (SEP 에서 이어받은 방식).
+#
+# LEP 의 Neon 접속 문자열은 어디에도 평문으로 없다 — 이 저장소의 시크릿에만 있고,
+# 마이그레이션·감사는 전부 여기서 돌린다. 로컬에 접속 문자열을 두지 않는다.
+#
+# 준비 (한 번만)
+#   저장소 Settings → Secrets and variables → Actions 에 다음을 넣는다.
+#     DATABASE_URL           LEP Neon 접속 문자열 (**SEP 것 금지** — 제품이 다르면 DB 도 다르다)
+#     CLOUDFLARE_API_TOKEN   R2 감사용 (audit 만 씀. 버킷 기본값 iep-uploads)
+#     CF_ACCOUNT_ID          R2 감사용
+#
+# 쓰는 법 — Actions 탭에서 이 워크플로를 고르고 "Run workflow".
+#   status     지금 상태만 본다 (기본값, 아무것도 바꾸지 않는다)
+#   audit      R2 와 DB 를 대조한다 (읽기 전용)
+#   migrate    database/ 의 .sql 을 적용한다 — file 칸에 파일명을 적어야 한다
+#
+# **migrate 는 적어 준 파일만 돌린다.** 디렉터리를 통째로 훑지 않는다 —
+# 이미 적용된 것을 다시 돌리는 사고가 제일 흔하다. 마이그레이션은 전부
+# `if not exists` / `or replace` 로 쓰여 있어 다시 돌아도 안전하지만, 그것에 기대지 않는다.
+
+name: DB
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '무엇을 할까'
+        type: choice
+        default: status
+        options: [status, audit, migrate]
+      file:
+        description: 'migrate 일 때 적용할 파일 (예: 010_recording_transcribe_state.sql)'
+        type: string
+        required: false
+
+# 두 개가 동시에 돌면서 같은 DB 를 만지지 않게 한다.
+concurrency:
+  group: db-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: 의존성 (pg 하나면 된다)
+        run: npm install --no-save pg@8
+
+      - name: 비밀값 확인
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL 시크릿이 없습니다. 저장소 Settings → Secrets 에 넣어 주세요."
+            exit 1
+          fi
+          echo "DATABASE_URL 설정됨 (값은 찍지 않습니다)"
+
+      - name: 상태
+        if: ${{ inputs.action == 'status' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node worker/tools/db-status.js
+
+      - name: 감사 (R2 ↔ DB)
+        if: ${{ inputs.action == 'audit' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: node worker/tools/r2-audit.js
+
+      - name: 마이그레이션
+        if: ${{ inputs.action == 'migrate' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MIGRATION_FILE: ${{ inputs.file }}
+        run: |
+          if [ -z "$MIGRATION_FILE" ]; then
+            echo "::error::file 칸에 적용할 파일명을 적어 주세요 (예: 010_recording_transcribe_state.sql)"
+            exit 1
+          fi
+          node worker/tools/db-migrate.js "database/$MIGRATION_FILE"

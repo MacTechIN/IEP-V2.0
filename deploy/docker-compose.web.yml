@@ -1,0 +1,23 @@
+# SEP v2 — 웹 프론트엔드 (별도 사이트). V1 과 완전 분리.
+# 기존 sep-v2-network(백엔드 스택이 생성)에 합류하여 /api 를 백엔드로 프록시.
+# 배포: docker compose -p sep-v2 -f docker-compose.web.yml up -d
+
+services:
+  web:
+    image: nginx:alpine
+    container_name: iep-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3082}:80"
+      - "${WEB_HTTPS_PORT:-3443}:443"
+    volumes:
+      - ../frontend/web/dist:/usr/share/nginx/html:ro
+      - ./web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./web/certs:/etc/nginx/certs:ro
+    networks:
+      - default
+
+networks:
+  default:
+    name: sep-v2-network
+    external: true

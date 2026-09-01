@@ -1,0 +1,159 @@
+# 녹음 백업 — 6시간마다 넣고, 넣은 것이 열리는지 확인한다.
+#
+# 계획서: docs/2026-08-13-r2-backup-plan.md
+#
+# 녹음 훈련을 따로 두지 않는다 (2026-08-15 합침).
+#   두 워크플로가 같은 일(두 버킷 목록 대조)을 두 번 했다. 백업이 끝난 그 자리에서
+#   확인하는 것이 자연스럽고, 확인이 월 1회에서 6시간마다로 잦아진다.
+#
+# 무엇을 막는가
+#   우리 코드가 지우는 것 · 덮어쓰기 · 사람이 콘솔에서 지우는 것.
+#   **토큰 유출은 못 막는다** — R2 토큰에 "쓰기만, 삭제 불가" 등급이 없다.
+#   계정 밖 사본이 그 답이다 — **2026-08-27 부터 Backblaze B2 로 돌고 있다.**
+#
+# 준비 — 저장소 Settings → Secrets and variables → Actions
+#   CF_ACCOUNT_ID                               1계정
+#   R2_ACCESS_KEY_ID · R2_SECRET_ACCESS_KEY     **객체용 (S3 API)**. 이것만 있으면 돈다
+#   R2_BACKUP_BUCKET (선택. 기본 iep-uploads-backup)
+#
+#   CLOUDFLARE_API_TOKEN                        **선택.** 잠금·버킷 목록을 함께 볼 때만
+#
+#   2026-08-24 에 객체를 S3 API 로 옮겼다 — 좁은 토큰(`Object Read & Write`)으로 돌기
+#   위해서다. 2026-08-15 에 토큰을 좁혔더니 백업이 28회 연속 실패했는데, 원인은
+#   client/v4 가 계정 단위 권한을 요구하는 것이었다. 자세한 것은 `worker/tools/r2-s3.js`.
+#
+#   계정 밖 사본 (2026-08-27 · Backblaze B2). **다른 회사**여야 뜻이 있다 —
+#   같은 회사의 두 계정은 같은 사람·같은 결제수단에 매여 있어 함께 막힌다.
+#   OFFSITE_ENDPOINT          예: s3.us-west-004.backblazeb2.com
+#   OFFSITE_REGION            예: us-west-004  (없으면 us-west-004)
+#   OFFSITE_ACCESS_KEY_ID     B2 애플리케이션 키의 keyID
+#   OFFSITE_SECRET_ACCESS_KEY 같은 키의 applicationKey. **한 번만 보여 준다**
+#   OFFSITE_BUCKET (선택. 기본 iep-uploads-offsite)
+#
+#   없으면 그 줄만 '미설정' 으로 적고 넘어간다 — 아직 안 만든 것이지 고장난 것이 아니다.
+#   **어느 이름이 없는지 하나씩 짚어 준다** — 뭉뚱그리면 짐작으로 왕복하게 된다.
+
+name: R2 backup
+
+on:
+  schedule:
+    # 6시간마다. 매시간으로 하지 않는 이유는 비용이 아니라 Actions 분이다 —
+    # 예약 실행은 상시 지연되고(이 계정 실측 평균 66분), 잦은 예약은 그만큼 분을 쓴다.
+    #
+    # 2026-08-16 에 MVP 테스트가 끝나 껐다가 **2026-08-18 에 다시 켰다.**
+    # 그 사이에 올라온 녹음은 사본이 없다 — 다시 켜면 다음 회차가 메운다(훑기 방식이라
+    # 놓친 것을 다음 회차가 메우는 것이 이 설계의 값이다).
+    - cron: '15 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      create_backup_bucket:
+        description: '백업 버킷이 없으면 만든다 (처음 한 번만)'
+        type: boolean
+        default: false
+      set_bucket_lock_days:
+        description: '버킷 잠금 일수 (비우면 안 건드림. 예: 30)'
+        type: string
+        default: ''
+      verify_lock:
+        description: '잠금이 정말 삭제를 막는지 탐침으로 확인'
+        type: boolean
+        default: false
+      allow_rekey:
+        # 백업 키 규칙이 바뀌었을 때만. **버킷 한 벌이 더 쌓인다** — 알고 켜는 것이다.
+        description: '백업 키가 하나도 안 맞아도 그대로 올린다 (한 벌 더 쌓임)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: r2-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: ffprobe
+        # 확인만 하지 않고 설치한다. `ffprobe -version | head -1` 로 확인하던 때는
+        # 파이프 때문에 없어도 통과했다 — 실패할 수 없는 검사는 없느니만 못하다.
+        run: |
+          set -euo pipefail
+          command -v ffprobe > /dev/null || { sudo apt-get update -qq; sudo apt-get install -y -qq ffmpeg; }
+          ffprobe -version | head -1
+
+      - name: 백업
+        id: run
+        continue-on-error: true          # 실패해도 기록은 남겨야 한다
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          # 객체는 이 둘로 본다 — 좁은 토큰이 통하는 유일한 길이다
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          # 잠금·버킷 목록용. 없으면 그 줄만 '못 봄' 으로 적고 넘어간다
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+          # 예약 실행에서는 절대 켜지지 않는다 — 손으로 고를 때만.
+          CREATE_BACKUP_BUCKET: ${{ inputs.create_backup_bucket && '1' || '' }}
+          SET_BUCKET_LOCK: ${{ inputs.set_bucket_lock_days }}
+          VERIFY_LOCK: ${{ inputs.verify_lock && '1' || '' }}
+          ALLOW_REKEY: ${{ inputs.allow_rekey && '1' || '' }}
+          # 계정 밖 사본 — **다른 회사에** 둔다 (2026-08-27, 기본 Backblaze B2).
+          # 같은 회사의 두 계정은 같은 사람·같은 결제수단에 매여 있어 함께 막힌다.
+          OFFSITE_ENDPOINT: ${{ secrets.OFFSITE_ENDPOINT }}
+          OFFSITE_REGION: ${{ secrets.OFFSITE_REGION }}
+          OFFSITE_ACCESS_KEY_ID: ${{ secrets.OFFSITE_ACCESS_KEY_ID }}
+          OFFSITE_SECRET_ACCESS_KEY: ${{ secrets.OFFSITE_SECRET_ACCESS_KEY }}
+          OFFSITE_BUCKET: ${{ secrets.OFFSITE_BUCKET }}
+        run: |
+          set +e
+          node worker/tools/r2-backup.js > /tmp/out.txt 2>&1
+          A=$?
+          # 계정 밖 사본은 **자격증명이 갈라져 있어야** 뜻이 있다.
+          # 같은 실행 안에서 도는 것은 상관없다 — 한쪽 토큰이 새도 다른 쪽 사본은 남는다.
+          node worker/tools/offsite-backup.js >> /tmp/out.txt 2>&1
+          B=$?
+          echo "code=$(( A > B ? A : B ))" >> "$GITHUB_OUTPUT"
+          cat /tmp/out.txt
+
+      - name: 기록
+        if: always()
+        run: |
+          set -euo pipefail
+          LOG=docs/health/r2-backup.log
+          mkdir -p docs/health
+          case '${{ steps.run.outputs.code }}' in
+            0) V=OK ;; 2) V=못봄 ;; *) V=실패 ;;
+          esac
+          { echo "$(date -u +'%Y-%m-%d %H:%M')Z  $V"; sed 's/^/  /' /tmp/out.txt; } >> "$LOG"
+          tail -6 "$LOG"
+          { echo "### 녹음 백업 — $V"; echo; echo '```'; cat /tmp/out.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+          # **매 회차를 커밋하지 않는다.** 하루 4번이면 진짜 커밋이 그 아래 묻힌다.
+          # Health 와 같은 규칙이다: **달라졌을 때**, 그리고 하루 한 번.
+          # 새로 넣은 것이 있으면 그것도 달라진 것이다.
+          PREV=$(git log -1 --format=%s -- "$LOG" 2>/dev/null | grep -oE '(OK|실패|못봄)' | head -1 || true)
+          if [ "$V" = "$PREV" ] && ! grep -qE '^넣음 [1-9]' /tmp/out.txt && [ "$(date -u +%H)" != 00 ]; then
+            echo "$V · 그대로 · 커밋 생략"; exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add "$LOG"
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(backup): $V $(date -u +'%Y-%m-%d %H:%M')Z [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+
+      - name: OK 가 아니면 이 실행도 실패로
+        if: steps.run.outputs.code != '0'
+        run: |
+          echo "::error::녹음 백업 — docs/health/r2-backup.log 최근 줄을 보세요"
+          exit 1

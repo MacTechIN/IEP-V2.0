@@ -1,0 +1,418 @@
+<title>SEP v2 개발 계획 — 지금까지와 앞으로</title>
+<style>
+  :root {
+    --ground:#F1F3F6; --surface:#FFFFFF; --surface-2:#E6EAF0; --sunken:#EBEEF3;
+    --ink:#141920; --ink-2:#465060; --ink-3:#6D7886;
+    --rule:#D4DAE3; --rule-2:#B3BDCB;
+    --done:#2C6B4C; --done-soft:#E3EFE9;
+    --now:#9A5B12; --now-soft:#FBF0DF;
+    --next:#2A5C8F; --next-soft:#E4EDF7;
+    --later:#5B5570; --later-soft:#ECEAF1;
+    --risk:#8A3324; --risk-soft:#F7E9E6;
+    --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D1116; --surface:#151B22; --surface-2:#1D242D; --sunken:#121820;
+      --ink:#E3E9F0; --ink-2:#A1ACBA; --ink-3:#788393;
+      --rule:#252F3A; --rule-2:#394654;
+      --done:#69BC90; --done-soft:#132A20;
+      --now:#DDA85C; --now-soft:#302511;
+      --next:#79ADDD; --next-soft:#12253A;
+      --later:#A79FC4; --later-soft:#221F2E;
+      --risk:#D89583; --risk-soft:#36221D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D1116; --surface:#151B22; --surface-2:#1D242D; --sunken:#121820;
+    --ink:#E3E9F0; --ink-2:#A1ACBA; --ink-3:#788393;
+    --rule:#252F3A; --rule-2:#394654;
+    --done:#69BC90; --done-soft:#132A20;
+    --now:#DDA85C; --now-soft:#302511;
+    --next:#79ADDD; --next-soft:#12253A;
+    --later:#A79FC4; --later-soft:#221F2E;
+    --risk:#D89583; --risk-soft:#36221D;
+  }
+
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--sans);
+    font-size: 16px; line-height: 1.72; margin: 0; padding: 0 1.25rem 6rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 64rem; margin: 0 auto; }
+
+  header { padding: 4rem 0 2rem; border-bottom: 2px solid var(--ink); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .75rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3); margin: 0 0 .9rem;
+  }
+  h1 {
+    font-size: clamp(1.8rem, 4.4vw, 2.7rem); line-height: 1.18; margin: 0 0 1rem;
+    letter-spacing: -.022em; font-weight: 700; text-wrap: balance;
+  }
+  .lede { font-size: 1.08rem; color: var(--ink-2); margin: 0; max-width: 52ch; }
+
+  .tally {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin: 2.25rem 0;
+  }
+  .tally div { background: var(--surface); padding: 1rem 1.15rem; }
+  .tally .n {
+    font-family: var(--mono); font-size: 1.7rem; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1.1; display: block;
+  }
+  .tally .k {
+    font-size: .74rem; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--ink-3); margin-top: .3rem; display: block;
+  }
+
+  section { margin: 3.5rem 0; }
+  h2 {
+    font-size: 1.45rem; letter-spacing: -.012em; margin: 0 0 1.2rem;
+    font-weight: 700; text-wrap: balance;
+  }
+  h3 { font-size: 1.02rem; margin: 2rem 0 .7rem; font-weight: 700; }
+  p { margin: 0 0 1rem; max-width: 66ch; }
+  .note { color: var(--ink-2); font-size: .94rem; }
+  code {
+    font-family: var(--mono); font-size: .86em;
+    background: var(--surface-2); padding: .12em .38em; border-radius: 2px;
+  }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); margin: 1.25rem 0; }
+  table { border-collapse: collapse; width: 100%; min-width: 36rem; font-size: .92rem; }
+  th, td { text-align: left; padding: .68rem .9rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-size: .67rem; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+    font-weight: 600; border-bottom: 1px solid var(--rule-2); white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.n, td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.win { font-family: var(--mono); color: var(--done); font-weight: 600; white-space: nowrap; }
+  td.bad { font-family: var(--mono); color: var(--risk); font-weight: 600; white-space: nowrap; }
+
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: .68rem; font-weight: 700;
+    padding: .14rem .45rem; border-radius: 2px; white-space: nowrap;
+  }
+  .badge.done  { background: var(--done-soft);  color: var(--done); }
+  .badge.now   { background: var(--now-soft);   color: var(--now); }
+  .badge.next  { background: var(--next-soft);  color: var(--next); }
+  .badge.later { background: var(--later-soft); color: var(--later); }
+  .badge.risk  { background: var(--risk-soft);  color: var(--risk); }
+
+  /* 로드맵 단계 */
+  .phase {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 4px solid var(--rule-2); padding: 1.15rem 1.3rem; margin: 1rem 0;
+  }
+  .phase.p1 { border-left-color: var(--now); }
+  .phase.p2 { border-left-color: var(--next); }
+  .phase.p3 { border-left-color: var(--later); }
+  .phase-h { display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; margin-bottom: .5rem; }
+  .phase-h .t { font-size: 1.05rem; font-weight: 700; }
+  .phase-h .w { font-family: var(--mono); font-size: .78rem; color: var(--ink-3); }
+  .phase ul { margin: .7rem 0 0; }
+
+  .callout {
+    background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--ink-3);
+    padding: 1rem 1.2rem; margin: 1.4rem 0;
+  }
+  .callout.risk { border-left-color: var(--risk); }
+  .callout.done { border-left-color: var(--done); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .h { font-weight: 700; display: block; margin-bottom: .3rem; }
+
+  ul, ol { margin: 0 0 1rem; padding-left: 1.25rem; max-width: 66ch; }
+  li { margin-bottom: .4rem; }
+  li::marker { color: var(--ink-3); }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: .75rem; color: var(--ink-3); line-height: 1.8;
+  }
+  @media (max-width: 40rem) { header { padding-top: 2.5rem; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">SEP v2 · 개발 계획 · 2026-08-12</p>
+  <h1>어디까지 왔고, 상용까지 무엇이 남았나</h1>
+  <p class="lede">지금은 기술 검증용으로 돌고 있습니다. 기능은 대부분 있고, 없는 것은 <strong>여러 사람이 동시에 쓸 때 필요한 것들</strong>입니다.</p>
+</header>
+
+<div class="tally">
+  <div><span class="n">111</span><span class="k">커밋</span></div>
+  <div><span class="n">8</span><span class="k">화면</span></div>
+  <div><span class="n">37</span><span class="k">API</span></div>
+  <div><span class="n">10</span><span class="k">마이그레이션</span></div>
+  <div><span class="n">v2.1.0</span><span class="k">현재 버전</span></div>
+</div>
+
+<section>
+  <h2>지금 상태를 한 문장으로</h2>
+  <p><strong>혼자 또는 소수가 쓰기에는 완성돼 있고, 여러 조직에 팔기에는 준비가 덜 됐습니다.</strong></p>
+  <p>미팅을 녹음해 분석하고 리포트를 받는 핵심 흐름은 처음부터 끝까지 돕니다. 실제 사용자가 실제 미팅으로 쓰고 있고, 지난 이틀 동안 그 과정에서 드러난 데이터 유실 경로를 전부 닫았습니다.</p>
+  <p>없는 것은 기능이 아니라 <em>운영</em>입니다 — 요금제, 사용량 제한, 온보딩, 장애 대응. 검증용이라 필요 없었던 것들입니다.</p>
+</section>
+
+<section>
+  <h2>1 · 구현 완료</h2>
+
+  <h3>핵심 흐름</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>기능</th><th>상태</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr><td>로그인 · 세션 · 토큰 갱신</td><td><span class="badge done">완료</span></td><td>녹음 중 세션 만료에도 녹음 유지</td></tr>
+      <tr><td>브라우저 녹음 · 파일 업로드</td><td><span class="badge done">완료</span></td><td>15초마다 IndexedDB 백업, 복구 가능</td></tr>
+      <tr><td>긴 녹음 자동 분할</td><td><span class="badge done">완료</span></td><td>STT 입력 한도(23분 20초) 대응</td></tr>
+      <tr><td>화자 분리 전사</td><td><span class="badge done">완료</span></td><td><code>gpt-4o-transcribe-diarize</code></td></tr>
+      <tr><td>본인 목소리 등록</td><td><span class="badge done">완료</span></td><td>내 발화에 실명 표기</td></tr>
+      <tr><td>분석 파이프라인</td><td><span class="badge done">완료</span></td><td>Cloudflare Workflow · 단계별 재시도</td></tr>
+      <tr><td>미팅 목록 · 상세 · 대시보드</td><td><span class="badge done">완료</span></td><td>리포트 / 지표 / 녹취 탭</td></tr>
+      <tr><td>관리자 사용자 관리</td><td><span class="badge done">완료</span></td><td><code>/admin/users</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>분석 산출물 10종</h3>
+  <p class="note">요약 · 고객 니즈 · 거래 신호 · 스코어 · 감정 · 핵심 포인트 · 후속 조치 · 심리 인사이트 · 코칭 · 스코어카드 · 발화 지표 · <strong>미팅 노트</strong>(클로바노트 형식의 리뷰용 정리)</p>
+
+  <h3>실시간 기능 (둘 다 선택제, 기본 꺼짐)</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>기능</th><th>구성</th><th>1시간 요금</th></tr></thead>
+    <tbody>
+      <tr><td>실시간 코칭</td><td>25초 주기 · whisper-1 + gpt-4o-mini</td><td class="num">약 $0.39</td></tr>
+      <tr><td>실시간 자막</td><td>Cloud Run 게이트웨이 · Deepgram nova-2</td><td class="num">약 $0.35</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">상세는 <code>docs/realtime_cauchingandstt.html</code> 참고.</p>
+
+  <h3>지난 이틀에 닫은 데이터 유실 경로</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>무엇이 문제였나</th><th>실측</th></tr></thead>
+    <tbody>
+      <tr><td>업로드가 요청 안에서 전사를 기다려, 그 사이 끊기면 파일만 남음</td><td class="win">188초 → 577ms</td></tr>
+      <tr><td>같은 녹음을 둘이 전사해 STT 비용 이중 청구</td><td class="win">동시 8 → 1</td></tr>
+      <tr><td>미팅 삭제 시 조각 오디오가 남아 "파기" 가 거짓이었음</td><td class="win">16개 → 36개 정리</td></tr>
+      <tr><td>확장자 바뀐 재업로드가 옛 파일을 방치</td><td class="win">실측 확인</td></tr>
+      <tr><td>실시간 루프가 껐다 켜면 둘로 늘어남</td><td class="win">세대 가드</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>운영 기반</h3>
+  <ul>
+    <li><strong>DB 작업이 사내 서버에서 독립</strong> — GitHub Actions 의 <code>DB</code> 워크플로 (<code>status</code>/<code>audit</code>/<code>migrate</code>)</li>
+    <li><strong>R2 감사 도구</strong> — 파일과 DB 를 양방향 대조. 보고만 하고 지우지 않음</li>
+    <li><strong>구조화 로그</strong> — <code>ev=… rid=…</code>, 요청 단위로 묶임, Workers Logs 에 보관</li>
+    <li><strong>버전 규칙 문서화</strong> — <code>CLAUDE.md</code> + <code>CHANGELOG.md</code></li>
+  </ul>
+</section>
+
+<section>
+  <h2>2 · 검증 결과 — 자막 엔진을 바꿀 것인가</h2>
+  <p>"OpenAI 하나로 통합하면 벤더가 줄지 않나" 를 <strong>실제 오디오로 측정</strong>했습니다. 회수한 실제 미팅 녹음 60초 × 2구간, 같은 조건.</p>
+
+  <div class="scroll"><table>
+    <thead><tr><th>엔진</th><th>방식</th><th>일치도</th><th>뽑아낸 글자</th><th>첫 결과</th></tr></thead>
+    <tbody>
+      <tr><td><code>gpt-transcribe</code></td><td>파일</td><td class="win">70.1%</td><td class="num">198자</td><td class="num">3,190ms</td></tr>
+      <tr><td><code>gpt-4o-transcribe</code></td><td>파일</td><td class="num">69.1%</td><td class="num">200자</td><td class="num">2,808ms</td></tr>
+      <tr><td><code>whisper-1</code></td><td>파일</td><td class="num">69.0%</td><td class="num">188자</td><td class="num">3,298ms</td></tr>
+      <tr><td><strong>Deepgram nova-2</strong></td><td><strong>스트리밍</strong></td><td class="num">64.4%</td><td class="num">190자</td><td class="num">5,673ms</td></tr>
+      <tr><td><code>gpt-4o-mini-transcribe</code></td><td>파일</td><td class="num">63.7%</td><td class="num">103자</td><td class="num">2,406ms</td></tr>
+      <tr><td><strong>OpenAI 실시간</strong></td><td><strong>스트리밍</strong></td><td class="bad">46.6%</td><td class="bad">95자</td><td class="bad">8,870ms</td></tr>
+    </tbody>
+  </table></div>
+
+  <p class="note"><strong>일치도</strong>는 나머지 엔진들과 문자 단위로 얼마나 겹치는가입니다(정규화 후). 사람이 검수한 정답이 없으므로 절대 정확도가 아니라 <em>다수결 대비 일치</em>입니다.</p>
+
+  <div class="callout risk">
+    <span class="h">결론: 옮기지 않는다</span>
+    <p>정확도 차이보다 <strong>누락</strong>이 결정적입니다. 스트리밍끼리 비교하면 Deepgram 190자, OpenAI 실시간 95자 — <strong>절반을 놓칩니다.</strong> 두 샘플 모두에서 그랬고, 두 번째 샘플에서는 일치도가 39.4%까지 떨어졌습니다.</p>
+    <p>원인은 제가 쓴 설정의 <strong>서버 VAD</strong> 로 보입니다. 발화가 겹치고 배경음이 있는 미팅에서 많이 버립니다. 다른 설정이면 나아질 수 있으니 "OpenAI 실시간이 나쁘다" 로 단정하지는 않습니다 — 다만 <strong>기본 설정으로 바로 갈아탈 수 있는 상태가 아닙니다.</strong></p>
+    <p>요금도 이유가 되지 못합니다. 둘 다 분당 약 $0.006 로 거의 같습니다. 게다가 Deepgram 은 화자 구분을 주는데 OpenAI 실시간은 주지 않습니다.</p>
+  </div>
+
+  <p><strong>재검토 시점</strong>: OpenAI 가 실시간 전사에 화자 구분을 추가하거나, VAD 를 끄고 연속 전사하는 옵션이 생기면 다시 잽니다.</p>
+</section>
+
+<section>
+  <h2>3 · 상용 전 남은 것</h2>
+  <p>순서는 <strong>막고 있는 정도</strong>로 정했습니다. 앞의 것이 끝나야 뒤가 의미 있는 경우가 많습니다.</p>
+
+  <div class="phase p1">
+    <div class="phase-h">
+      <span class="badge now">1단계</span>
+      <span class="t">지금 열려 있는 것 닫기</span>
+      <span class="w">1주</span>
+    </div>
+    <p class="note">기능이 아니라 <strong>지금 상태로 남에게 보여줄 수 없는 것들</strong>입니다.</p>
+    <ul>
+      <li><strong>회귀 검증 실행</strong> — 계획서(<code>docs/2026-08-11-regression-test-plan.md</code>)가 승인 대기 중. 스무 개 넘게 고쳤는데 그중 둘은 이미 한 번 되깨진 적이 있습니다</li>
+      <li><strong>실시간 자막 브라우저 확인</strong> — 게이트웨이 쪽은 실측했으나 브라우저의 오디오 변환은 미검증</li>
+      <li><strong>사내 서버 종료</strong> — 데이터·통로 모두 옮겼고 24시간 트래픽 0. 멈추기만 하면 됩니다</li>
+      <li><strong>검증용 계정 정리</strong> — <code>zz-검증@</code>, <code>scope-check@</code>, <code>pilot-…@</code></li>
+    </ul>
+  </div>
+
+  <div class="phase p1">
+    <div class="phase-h">
+      <span class="badge now">2단계</span>
+      <span class="t">여러 사람이 써도 버티게</span>
+      <span class="w">2~3주</span>
+    </div>
+    <p class="note">지금은 <strong>쓰는 사람이 적어서</strong> 문제가 안 되는 것들입니다.</p>
+    <ul>
+      <li><strong>사용량 상한</strong> — v1 에는 있고(일 20회/사용자, 50회/조직) v2 에는 없습니다. STT 는 20분 오디오당 약 $1.27 이라, 버튼을 반복해 누르는 것만으로 비용이 쌓입니다</li>
+      <li><strong>비용 가시화</strong> — 조직별·사용자별 사용량을 볼 수 있어야 요금제를 정할 수 있습니다</li>
+      <li><strong>업로드 크기·길이 제한</strong> — 지금은 사실상 무제한</li>
+      <li><strong>동시 분석 제한</strong> — 한 조직이 열 건을 한꺼번에 걸면 다른 조직이 밀립니다</li>
+      <li><strong>실패 알림</strong> — 분석이 실패해도 사용자가 화면을 열어야만 압니다</li>
+    </ul>
+  </div>
+
+  <div class="phase p2">
+    <div class="phase-h">
+      <span class="badge next">3단계</span>
+      <span class="t">팔 수 있는 제품으로</span>
+      <span class="w">3~4주</span>
+    </div>
+    <ul>
+      <li><strong>조직 가입 흐름</strong> — 지금은 관리자가 직접 넣습니다. 초대 · 가입 · 첫 설정이 필요합니다</li>
+      <li><strong>요금제와 결제</strong> — 상한을 요금제에 묶고 초과 시 처리를 정해야 합니다</li>
+      <li><strong>온보딩</strong> — 목소리 등록, 첫 녹음, 리포트 읽는 법을 안내하는 흐름</li>
+      <li><strong>데이터 내보내기</strong> — 미팅 노트·리포트를 PDF/문서로. 고객이 가장 먼저 요구하는 것입니다</li>
+      <li><strong>보관 정책을 조직이 정하게</strong> — 지금은 90일 고정입니다</li>
+    </ul>
+  </div>
+
+  <div class="phase p2">
+    <div class="phase-h">
+      <span class="badge next">4단계</span>
+      <span class="t">운영할 수 있게</span>
+      <span class="w">2주</span>
+    </div>
+    <ul>
+      <li><strong>장애 감지</strong> — 지금은 로그를 사람이 봐야 압니다. 분석 실패율·응답 시간에 알림이 필요합니다</li>
+      <li><strong>정기 감사 자동화</strong> — R2 감사와 DB 상태 점검을 주기 실행하고 결과만 통지</li>
+      <li><strong>백업과 복구 절차</strong> — Neon 백업은 있으나 <strong>복구를 해 본 적이 없습니다</strong></li>
+      <li><strong>개인정보 처리 문서</strong> — 어떤 데이터가 어디로 가는지(OpenAI·Deepgram·Google) 정리. 기업 고객이 반드시 묻습니다</li>
+    </ul>
+  </div>
+
+  <div class="phase p3">
+    <div class="phase-h">
+      <span class="badge later">이후</span>
+      <span class="t">있으면 좋은 것</span>
+      <span class="w">—</span>
+    </div>
+    <ul>
+      <li>미팅 검색 (지금은 목록만)</li>
+      <li>고객사별 히스토리 · 추세</li>
+      <li>팀 단위 비교 · 벤치마크</li>
+      <li>모바일 대응 (지금은 데스크톱 기준)</li>
+      <li><code>MeetingDetailPage</code> 분해 (2,300줄 넘음)</li>
+      <li>번들 코드 분할 (700KB)</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>4 · 상용 전 반드시 정해야 할 것</h2>
+  <p>기술이 아니라 <strong>결정</strong>이 필요한 항목입니다. 이것들이 정해지지 않으면 3단계를 시작할 수 없습니다.</p>
+
+  <div class="scroll"><table>
+    <thead><tr><th>결정 사항</th><th>왜 지금</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>가격 구조</strong></td>
+        <td>미팅당 원가가 분석 $2~4 + 실시간 $0.7 수준입니다. 정액인지 종량인지에 따라 상한 설계가 달라집니다</td>
+      </tr>
+      <tr>
+        <td><strong>데이터 보관 기간</strong></td>
+        <td>지금 90일 고정. 고객이 정하게 할지, 요금제로 나눌지</td>
+      </tr>
+      <tr>
+        <td><strong>녹음 원본 보관 여부</strong></td>
+        <td>전사가 끝나면 오디오를 지울 수도 있습니다. 저장 비용과 재분석 가능성의 맞교환입니다</td>
+      </tr>
+      <tr>
+        <td><strong>외부 서비스 고지 범위</strong></td>
+        <td>음성이 OpenAI·Deepgram·Google 로 갑니다. 어디까지 계약서에 명시할지</td>
+      </tr>
+      <tr>
+        <td><strong>실시간 기능 기본값</strong></td>
+        <td>현재 꺼짐. 요금제에 포함할지 별도 옵션으로 할지</td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>5 · 알려진 위험</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>위험</th><th>지금</th><th>대응</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>STT 비용이 매출을 넘을 수 있음</strong></td>
+        <td><span class="badge risk">열림</span></td>
+        <td>2단계 상한 + 비용 가시화가 먼저</td>
+      </tr>
+      <tr>
+        <td><strong>복구를 해 본 적이 없음</strong></td>
+        <td><span class="badge risk">열림</span></td>
+        <td>4단계. 백업이 있다는 것과 복구된다는 것은 다릅니다</td>
+      </tr>
+      <tr>
+        <td>벤더 3사 의존 (OpenAI · Deepgram · GCP)</td>
+        <td><span class="badge now">인지</span></td>
+        <td>통합 검토했으나 품질 손실로 보류(2절)</td>
+      </tr>
+      <tr>
+        <td>한국어 전사 정확도</td>
+        <td><span class="badge now">인지</span></td>
+        <td>실측 일치도 64~70%. 고유명사·숫자에 약함</td>
+      </tr>
+      <tr>
+        <td>단일 리전 (Neon ap-southeast-1)</td>
+        <td><span class="badge later">낮음</span></td>
+        <td>지금 규모에서는 문제 아님</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout done">
+    <span class="h">닫힌 위험</span>
+    <p>녹음 유실(3중 원인) · 고아 파일 · 중복 STT 청구 · 사내 서버 의존 · 시드 비밀번호 노출 — <strong>전부 실측으로 확인해 닫았습니다.</strong> 지난 이틀 작업의 대부분이 이것이었습니다.</p>
+  </div>
+</section>
+
+<section>
+  <h2>6 · 일정 요약</h2>
+  <div class="scroll"><table>
+    <thead><tr><th>단계</th><th>내용</th><th>기간</th><th>누적</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge now">1</span></td><td>열려 있는 것 닫기 · 검증</td><td class="num">1주</td><td class="num">1주</td></tr>
+      <tr><td><span class="badge now">2</span></td><td>사용량 상한 · 비용 가시화</td><td class="num">2~3주</td><td class="num">3~4주</td></tr>
+      <tr><td><span class="badge next">3</span></td><td>가입 · 요금제 · 온보딩 · 내보내기</td><td class="num">3~4주</td><td class="num">6~8주</td></tr>
+      <tr><td><span class="badge next">4</span></td><td>운영 · 감시 · 복구 · 문서</td><td class="num">2주</td><td class="num">8~10주</td></tr>
+    </tbody>
+  </table></div>
+
+  <p class="note"><strong>이 기간은 개발 시간만 센 것입니다.</strong> 4절의 결정이 늦어지면 3단계가 그만큼 밀립니다. 또 1·2단계는 순서를 바꿀 수 없습니다 — 상한 없이 사용자를 늘리면 비용이 먼저 터집니다.</p>
+
+  <div class="callout">
+    <span class="h">가장 빠른 길</span>
+    <p>제한된 고객 몇 곳으로 <strong>파일럿</strong>을 먼저 여는 것입니다. 그러면 3단계(가입·결제)를 미루고 1·2단계만으로 시작할 수 있습니다 — <strong>3~4주.</strong> 계정은 수동으로 만들고, 요금은 청구서로 받으면 됩니다.</p>
+  </div>
+</section>
+
+<footer>
+  SEP v2.1.0 · 2026-08-12 · MacTechIN/SEP-V2.0<br>
+  구성: Cloudflare Workers/Pages · Neon Postgres · R2 · Cloud Run(스트림) · OpenAI · Deepgram<br>
+  측정값은 실제 프로덕션과 실제 미팅 녹음으로 잰 것입니다. 요금은 공개 요금표 기준 추정치입니다.
+</footer>
+
+</div>

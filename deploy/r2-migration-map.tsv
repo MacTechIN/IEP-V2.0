@@ -1,0 +1,24 @@
+# C-4b R2 이전 매핑 (2026-08-08)
+# 사내 볼륨 sep-v2_uploads → R2 sep-v2-uploads. 원본은 지우지 않았다.
+# DB 의 storage_path/audio_url 은 **아직 사내 경로 그대로다** — 전환은 C-5-4 에서 한다.
+# 그때 이 표로 대조하면 되고, 키는 <종류>/<id><확장자> 규칙이라 계산으로도 나온다.
+#
+종류	id	사내경로	R2키
+recording	28cef276-b85d-4404-aed6-73408b7af057	/app/uploads/rec-1786115225938-344826.wav	recordings/28cef276-b85d-4404-aed6-73408b7af057.wav
+recording	c4936bcd-6e2c-4ceb-a471-d69be72cfe5b	/app/uploads/rec-1786115307074-646358.wav	recordings/c4936bcd-6e2c-4ceb-a471-d69be72cfe5b.wav
+recording	825f82a7-9b5e-4490-84ac-a1710ae2f384	/app/uploads/rec-1786115774179-541384.webm	recordings/825f82a7-9b5e-4490-84ac-a1710ae2f384.webm
+recording	38e1c9f6-55d0-47b2-adfe-2dfd41ce3d8f	/app/uploads/rec-1786115786734-209689.webm	recordings/38e1c9f6-55d0-47b2-adfe-2dfd41ce3d8f.webm
+recording	2971548e-ca3f-4b3b-9a08-7a7be0ea93c1	/app/uploads/rec-1786115798587-135298.webm	recordings/2971548e-ca3f-4b3b-9a08-7a7be0ea93c1.webm
+recording	ee421117-bb6f-4992-93a9-ba9c328973ad	/app/uploads/rec-1786117778674-753123.wav	recordings/ee421117-bb6f-4992-93a9-ba9c328973ad.wav
+recording	c2e4c1d7-33b9-4318-aa38-49833e772503	/app/uploads/rec-1786119656648-53735.wav	recordings/c2e4c1d7-33b9-4318-aa38-49833e772503.wav
+recording	c7239e21-8a7e-4da3-b9d5-bfc85da4c4fc	/app/uploads/rec-1786120411188-812114.wav	recordings/c7239e21-8a7e-4da3-b9d5-bfc85da4c4fc.wav
+recording	3a197586-9038-466f-a016-d40356413b7d	/app/uploads/rec-1786121083600-961594.wav	recordings/3a197586-9038-466f-a016-d40356413b7d.wav
+recording	d09147b7-7701-4396-9506-37df7f4ac9a6	/app/uploads/rec-1786121311575-503509.wav	recordings/d09147b7-7701-4396-9506-37df7f4ac9a6.wav
+recording	1d59346c-a182-41e3-ac8d-1ceea07ba709	/app/uploads/rec-1786121443945-709959.wav	recordings/1d59346c-a182-41e3-ac8d-1ceea07ba709.wav
+recording	2fe06ca0-5e8c-49be-971c-54487dfeaebc	/app/uploads/rec-1786177227352-330132.webm	recordings/2fe06ca0-5e8c-49be-971c-54487dfeaebc.webm
+recording	0cd3e651-d325-4083-858e-a504c405d17f	/app/uploads/rec-1786177238724-868581.webm	recordings/0cd3e651-d325-4083-858e-a504c405d17f.webm
+meeting	5f82a491-cbb9-49d0-ad9b-aef82efb83fe	/app/uploads/5f82a491-cbb9-49d0-ad9b-aef82efb83fe.mp3	meetings/5f82a491-cbb9-49d0-ad9b-aef82efb83fe.mp3
+meeting	80eca180-b496-4947-ad48-67d9fdc544b6	/app/uploads/80eca180-b496-4947-ad48-67d9fdc544b6.wav	meetings/80eca180-b496-4947-ad48-67d9fdc544b6.wav
+meeting	b077c622-794b-4d66-8b5e-ff7aaae5dd20	/app/uploads/b077c622-794b-4d66-8b5e-ff7aaae5dd20.wav	meetings/b077c622-794b-4d66-8b5e-ff7aaae5dd20.wav
+meeting	bb85f159-874a-417e-988f-34fb21bbed76	/app/uploads/bb85f159-874a-417e-988f-34fb21bbed76.wav	meetings/bb85f159-874a-417e-988f-34fb21bbed76.wav
+meeting	da68958a-928e-41c7-b715-3d2e739d32d6	/app/uploads/da68958a-928e-41c7-b715-3d2e739d32d6.webm	meetings/da68958a-928e-41c7-b715-3d2e739d32d6.webm

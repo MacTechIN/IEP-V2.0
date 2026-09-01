@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "SEP Mobile",
+    "slug": "sep-mobile",
+    "version": "2.0.0",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTabletMode": true
+    },
+    "android": {
+      "useNextNotificationsApi": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+# Keep the Docker build context lean (backend image only needs backend/ + database/)
+**/node_modules
+**/dist
+.git
+frontend
+mvp
+*.log
+**/.env
+**/.env.*
+deploy/.env
+deploy/.env.production
+docs
+*.md

@@ -1,0 +1,15 @@
+# 줄바꿈 정규화
+* text=auto
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+
+# 바이너리 파일
+*.png binary
+*.jpg binary
+*.gif binary
+*.jpeg binary
+*.mov binary
+*.mp4 binary

@@ -1,0 +1,42 @@
+# 빌드 스테이지
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# 의존성 설치
+COPY backend/package*.json ./
+RUN npm ci
+
+# TypeScript 컴파일
+COPY backend/src ./src
+COPY backend/tsconfig.json ./
+RUN npm run build
+
+# 실행 스테이지
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 환경 변수
+ENV NODE_ENV=production
+
+# 의존성 설치 (production만)
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+# 빌드 결과 복사
+COPY --from=builder /app/dist ./dist
+
+# DB 마이그레이션 SQL 포함.
+# 부팅 시가 아니라 `node dist/database/migrate.js` 단계에서 쓴다 (compose 의 migrate 서비스).
+COPY database ./database
+
+# 포트 노출
+EXPOSE 3000
+
+# 헬스 체크
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+# 시작
+CMD ["node", "dist/index.js"]

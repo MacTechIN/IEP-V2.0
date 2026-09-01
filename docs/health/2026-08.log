@@ -1,0 +1,411 @@
+2026-08-12 18:05  OK    web=260ms api=224ms stream=423ms login=ok db=1631ms transcribe=ok analysis=ok
+  web: index-BRr-1AWE.js
+  analysis: 24h 미팅 4 · 실패 0
+2026-08-12 18:06  PART  web=123ms api=121ms stream=231ms login=skip db=1617ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-BRr-1AWE.js
+  analysis: 24h 미팅 4 · 실패 0
+  ※ 위 18:05 줄의 login=ok 는 틀렸다. 그때 HEALTH_* 계정이 없어 건너뛴 것을
+     'ok' 로 찍은 것이다(56220e7 에서 고침). 지우지 않고 남긴다 — 로그를 나중에
+     고쳐 쓰기 시작하면 나머지 줄도 믿을 수 없게 된다.
+2026-08-13 06:11  PART  web=155ms api=170ms stream=1348ms login=skip db=1789ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-BRr-1AWE.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-13 12:54  PART  web=321ms api=147ms stream=1052ms login=skip db=2749ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-BRr-1AWE.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-13 18:53  PART  web=175ms api=180ms stream=1130ms login=skip db=2384ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-BRr-1AWE.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-14 06:08  PART  web=288ms api=224ms stream=1226ms login=skip db=1913ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-BRr-1AWE.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-14 12:49  PART  web=354ms api=192ms stream=1064ms login=skip db=2134ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-14 18:43  PART  web=223ms api=163ms stream=1057ms login=skip db=2262ms transcribe=ok analysis=ok
+  못 봄: login(HEALTH_EMAIL/HEALTH_PASSWORD 미설정)
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-14 20:27  OK    web=115ms api=120ms stream=386ms auth=338ms db=1607ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-14 21:34  OK    web=136ms api=118ms stream=1320ms auth=814ms db=1690ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-15 00:50  OK    web=139ms api=103ms stream=1493ms auth=1487ms db=1645ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-15 06:24  OK    web=125ms api=131ms stream=1050ms auth=1597ms db=1739ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-15 10:15  OK    web=321ms api=195ms stream=1392ms auth=1505ms db=1366ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-15 12:22  OK    web=194ms api=174ms stream=1049ms auth=1431ms db=1465ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-15 13:24  OK    web=168ms api=144ms stream=1351ms auth=1432ms db=1502ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-15 18:18  OK    web=191ms api=197ms stream=1057ms auth=1331ms db=1320ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-15 19:16  OK    web=271ms api=226ms stream=1069ms auth=1495ms db=1362ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-15 23:27  OK    web=184ms api=154ms stream=255ms auth=1389ms db=1480ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-16 00:53  OK    web=189ms api=239ms stream=1140ms auth=1483ms db=1489ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-16 06:27  OK    web=345ms api=134ms stream=1094ms auth=1537ms db=1695ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-16 12:24  OK    web=217ms api=106ms stream=1243ms auth=1524ms db=1651ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-16 18:17  OK    web=255ms api=120ms stream=1109ms auth=1584ms db=1696ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-17 00:51  OK    web=236ms api=98ms stream=1346ms auth=1925ms db=1658ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-17 06:39  OK    web=223ms api=139ms stream=1435ms auth=1565ms db=1527ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-17 12:29  SLOW  web=143ms api=123ms stream=1354ms auth=4220ms db=1224ms transcribe=ok analysis=ok
+  느림: auth 4220ms
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-17 13:33  OK    web=158ms api=106ms stream=976ms auth=1431ms db=1249ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-17 18:28  OK    web=253ms api=134ms stream=1270ms auth=1448ms db=1695ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-18 00:49  OK    web=276ms api=256ms stream=1146ms auth=1527ms db=1364ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-18 04:28  OK    web=335ms api=163ms stream=1135ms auth=1309ms db=1287ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-18 06:30  SLOW  web=389ms api=281ms stream=1287ms auth=3452ms db=1464ms transcribe=ok analysis=ok
+  느림: auth 3452ms
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-18 07:31  OK    web=187ms api=169ms stream=1388ms auth=1816ms db=1334ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-18 12:31  OK    web=128ms api=134ms stream=940ms auth=1577ms db=1657ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-18 13:37  OK    web=180ms api=100ms stream=1374ms auth=1419ms db=1269ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-18 18:27  OK    web=124ms api=112ms stream=1113ms auth=2548ms db=1609ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-18 19:22  OK    web=281ms api=245ms stream=1177ms auth=1592ms db=1448ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-19 00:50  OK    web=219ms api=117ms stream=1107ms auth=1571ms db=1687ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-19 02:14  OK    web=208ms api=218ms stream=1067ms auth=1982ms db=1476ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-19 06:31  SLOW  web=265ms api=163ms stream=1000ms auth=3561ms db=1347ms transcribe=ok analysis=ok
+  느림: auth 3561ms
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-19 07:32  OK    web=233ms api=183ms stream=1332ms auth=1517ms db=1489ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-19 12:31  OK    web=165ms api=202ms stream=1082ms auth=1509ms db=1501ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-19 13:38  OK    web=148ms api=189ms stream=1421ms auth=1481ms db=1698ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-19 18:23  OK    web=190ms api=216ms stream=1190ms auth=1565ms db=1459ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-19 19:19  OK    web=175ms api=182ms stream=962ms auth=1956ms db=1677ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-20 00:50  OK    web=1197ms api=276ms stream=1237ms auth=741ms db=1286ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-20 02:13  OK    web=399ms api=157ms stream=1360ms auth=1553ms db=1475ms transcribe=ok analysis=ok
+  web: index-7-k8s615.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-20 03:39  OK    web=201ms api=130ms stream=1191ms auth=1611ms db=1266ms transcribe=ok analysis=ok
+  web: index-D6R6RFt3.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-20 04:29  OK    web=291ms api=214ms stream=965ms auth=1587ms db=1371ms transcribe=ok analysis=ok
+  web: index-C9XdL7_u.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-20 05:24  OK    web=270ms api=184ms stream=1132ms auth=1458ms db=1485ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 06:33  OK    web=1051ms api=182ms stream=1125ms auth=868ms db=1283ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 07:34  OK    web=229ms api=222ms stream=1176ms auth=822ms db=1381ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 08:29  OK    web=153ms api=140ms stream=1074ms auth=1286ms db=1248ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 12:33  OK    web=149ms api=108ms stream=1047ms auth=1558ms db=1670ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 13:40  OK    web=166ms api=131ms stream=1268ms auth=1577ms db=1686ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 18:28  OK    web=225ms api=202ms stream=1259ms auth=1406ms db=1362ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-20 19:25  OK    web=298ms api=263ms stream=1359ms auth=1546ms db=1384ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-21 00:54  OK    web=237ms api=137ms stream=910ms auth=1780ms db=1625ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-21 02:20  OK    web=250ms api=199ms stream=1095ms auth=640ms db=1360ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-21 04:30  OK    web=112ms api=150ms stream=1285ms auth=1567ms db=1730ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-21 06:33  OK    web=269ms api=181ms stream=884ms auth=1303ms db=1243ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-21 07:36  OK    web=467ms api=104ms stream=1067ms auth=798ms db=1627ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-21 12:32  OK    web=135ms api=121ms stream=1039ms auth=1508ms db=1720ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-21 13:39  OK    web=187ms api=169ms stream=1050ms auth=1568ms db=1535ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-21 18:26  OK    web=124ms api=132ms stream=959ms auth=1534ms db=1658ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-21 19:20  OK    web=194ms api=154ms stream=1283ms auth=1492ms db=1689ms transcribe=ok analysis=ok
+  web: index-BiWsxYn8.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-22 00:50  OK    web=146ms api=111ms stream=1118ms auth=1646ms db=1254ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 3 · 실패 0
+2026-08-22 02:12  OK    web=330ms api=221ms stream=1174ms auth=1467ms db=1388ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 2 · 실패 0
+2026-08-22 06:27  OK    web=118ms api=112ms stream=1069ms auth=1528ms db=1658ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-22 07:25  OK    web=315ms api=194ms stream=1050ms auth=1457ms db=1494ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-22 09:20  OK    web=201ms api=122ms stream=1480ms auth=1437ms db=1254ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-22 12:23  OK    web=223ms api=105ms stream=1514ms auth=1449ms db=1640ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-22 13:26  OK    web=114ms api=118ms stream=1546ms auth=1324ms db=1258ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-22 18:18  OK    web=138ms api=107ms stream=1581ms auth=1431ms db=1699ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-22 19:17  OK    web=226ms api=209ms stream=1640ms auth=1619ms db=1315ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 00:54  OK    web=182ms api=152ms stream=1283ms auth=1331ms db=1326ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 02:21  OK    web=145ms api=157ms stream=1767ms auth=1484ms db=1555ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 06:28  OK    web=297ms api=201ms stream=1126ms auth=1946ms db=1478ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 07:27  OK    web=154ms api=86ms stream=1296ms auth=1441ms db=1447ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 12:24  OK    web=213ms api=187ms stream=1282ms auth=1482ms db=1491ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 13:27  OK    web=357ms api=166ms stream=1433ms auth=1423ms db=1619ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 18:19  OK    web=132ms api=123ms stream=1238ms auth=1348ms db=1252ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-23 19:17  OK    web=234ms api=113ms stream=1279ms auth=1524ms db=1705ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-24 00:52  OK    web=211ms api=215ms stream=1319ms auth=1997ms db=1449ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-24 02:19  OK    web=281ms api=190ms stream=1419ms auth=1379ms db=1509ms transcribe=ok analysis=ok
+  web: index-S_s3pqEp.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-24 03:48  OK    web=260ms api=134ms stream=1256ms auth=1533ms db=1252ms transcribe=ok analysis=ok
+  web: index-CTBpBMYG.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 04:37  OK    web=261ms api=186ms stream=1330ms auth=1416ms db=1363ms transcribe=ok analysis=ok
+  web: index-CTBpBMYG.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 06:41  OK    web=409ms api=178ms stream=1089ms auth=1337ms db=1254ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 07:52  OK    web=262ms api=216ms stream=1261ms auth=1579ms db=1364ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 08:39  OK    web=225ms api=224ms stream=1292ms auth=1464ms db=1461ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 09:39  OK    web=270ms api=229ms stream=1396ms auth=1572ms db=1538ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 12:34  OK    web=129ms api=109ms stream=1241ms auth=1424ms db=1258ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 13:44  OK    web=134ms api=208ms stream=1355ms auth=1935ms db=1644ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 18:29  OK    web=324ms api=387ms stream=1286ms auth=1607ms db=1386ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-24 19:23  OK    web=215ms api=139ms stream=1114ms auth=1432ms db=1660ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-25 00:52  OK    web=211ms api=353ms stream=1109ms auth=1799ms db=1307ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-25 02:14  OK    web=113ms api=105ms stream=1148ms auth=1539ms db=1738ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+2026-08-25 06:33  OK    web=471ms api=228ms stream=1104ms auth=1493ms db=1289ms transcribe=ok analysis=ok
+  web: index-DAJFbQ56.js
+  analysis: 24h 미팅 1 · 실패 0
+(node:2055) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+2026-08-26 07:25  SLOW  web=238ms api=148ms stream=226ms auth=3583ms db=1608ms transcribe=ok analysis=ok
+  느림: auth 3583ms
+  web: index-BUzxIokK.js
+  analysis: 24h 미팅 6 · 실패 0
+2026-08-26 07:27  SLOW  web=315ms api=264ms stream=480ms auth=3164ms db=1624ms transcribe=ok analysis=ok
+  느림: auth 3164ms
+  web: index-BUzxIokK.js
+  analysis: 24h 미팅 6 · 실패 0
+2026-08-26 08:27  OK    web=245ms api=154ms stream=896ms auth=2752ms db=1198ms transcribe=ok analysis=ok
+  web: index-BUzxIokK.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 09:27  SLOW  web=186ms api=113ms stream=1426ms auth=4424ms db=1645ms transcribe=ok analysis=ok
+  느림: auth 4424ms
+  web: index-BvnQasx6.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 12:21  SLOW  web=115ms api=131ms stream=1534ms auth=3570ms db=1610ms transcribe=ok analysis=ok
+  느림: auth 3570ms
+  web: index-Ch5-FedY.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 13:42  SLOW  web=156ms api=150ms stream=1170ms auth=3792ms db=1613ms transcribe=ok analysis=ok
+  느림: auth 3792ms
+  web: index-C1E7nQR0.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 14:31  SLOW  web=238ms api=215ms stream=1477ms auth=3159ms db=1234ms transcribe=ok analysis=ok
+  느림: auth 3159ms
+  web: index-hV8TBr45.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 16:07  SLOW  web=312ms api=228ms stream=1183ms auth=3364ms db=1379ms transcribe=ok analysis=ok
+  느림: auth 3364ms
+  web: index-hV8TBr45.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 18:32  SLOW  web=278ms api=221ms stream=1553ms auth=3914ms db=1374ms transcribe=ok analysis=ok
+  느림: auth 3914ms
+  web: index-hV8TBr45.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-26 21:20  SLOW  web=146ms api=131ms stream=1516ms auth=4293ms db=1693ms transcribe=ok analysis=ok
+  느림: auth 4293ms
+  web: index-hV8TBr45.js
+  analysis: 24h 미팅 7 · 실패 0
+2026-08-27 02:17  SLOW  web=120ms api=123ms stream=1291ms auth=3691ms db=1603ms transcribe=ok analysis=ok
+  느림: auth 3691ms
+  web: index-hV8TBr45.js
+  analysis: 24h 미팅 4 · 실패 0
+2026-08-27 23:15  SLOW  web=134ms api=176ms stream=1327ms auth=3313ms db=1295ms transcribe=ok analysis=ok
+  느림: auth 3313ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-28 07:09  SLOW  web=918ms api=284ms stream=1514ms auth=3339ms db=1278ms transcribe=ok analysis=ok
+  느림: auth 3339ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-28 19:38  SLOW  web=311ms api=416ms stream=1422ms auth=3638ms db=1383ms transcribe=ok analysis=ok
+  느림: auth 3638ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-29 02:29  SLOW  web=541ms api=228ms stream=1392ms auth=3375ms db=1553ms transcribe=ok analysis=ok
+  느림: auth 3375ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-29 09:25  OK    web=700ms api=174ms stream=1305ms auth=2775ms db=1254ms transcribe=ok analysis=ok
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-29 14:43  SLOW  web=139ms api=116ms stream=1098ms auth=4284ms db=1691ms transcribe=ok analysis=ok
+  느림: auth 4284ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-29 17:56  OK    web=237ms api=232ms stream=1025ms auth=2945ms db=1222ms transcribe=ok analysis=ok
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-29 20:07  SLOW  web=164ms api=188ms stream=1240ms auth=3082ms db=1269ms transcribe=ok analysis=ok
+  느림: auth 3082ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-29 22:50  SLOW  web=230ms api=187ms stream=1002ms auth=3140ms db=1226ms transcribe=ok analysis=ok
+  느림: auth 3140ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-30 00:48  SLOW  web=370ms api=254ms stream=1306ms auth=4311ms db=1371ms transcribe=ok analysis=ok
+  느림: auth 4311ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-30 05:58  SLOW  web=275ms api=123ms stream=1421ms auth=3119ms db=1254ms transcribe=ok analysis=ok
+  느림: auth 3119ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-30 15:31  SLOW  web=235ms api=153ms stream=1357ms auth=3676ms db=1461ms transcribe=ok analysis=ok
+  느림: auth 3676ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-30 18:51  SLOW  web=179ms api=141ms stream=1332ms auth=4664ms db=1745ms transcribe=ok analysis=ok
+  느림: auth 4664ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-30 21:40  SLOW  web=161ms api=139ms stream=1263ms auth=4360ms db=1545ms transcribe=ok analysis=ok
+  느림: auth 4360ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0
+2026-08-31 08:56  SLOW  web=192ms api=139ms stream=1053ms auth=4544ms db=1645ms transcribe=ok analysis=ok
+  느림: auth 4544ms
+  web: index-D0SS7GcD.js
+  analysis: 24h 미팅 0 · 실패 0

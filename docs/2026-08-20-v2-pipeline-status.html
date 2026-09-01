@@ -1,0 +1,646 @@
+<title>SEP v2 파이프라인 현황</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+
+<style>
+  /* 팔레트는 제품이 이미 쓰는 값에서 가져온다 —
+     헤더의 인디고, 그리고 실시간 레이더의 정상·주의·위험 색 그대로다. */
+  :root {
+    --bg:        #F6F7FB;
+    --surface:   #FFFFFF;
+    --sunken:    #EDEFF6;
+    --ink:       #171A24;
+    --ink-soft:  #5A6076;
+    --ink-faint: #878DA3;
+    --rule:      #DCDFEC;
+    --rule-soft: #E9EBF3;
+    --accent:    #3949AB;
+    --accent-dim:#8A93D4;
+    --ok:        #166534;
+    --ok-bg:     #ECFDF3;
+    --warn:      #92400E;
+    --warn-bg:   #FFFBEB;
+    --bad:       #991B1B;
+    --bad-bg:    #FEF2F2;
+    --shadow:    0 1px 2px rgba(23,26,36,.06), 0 8px 24px -12px rgba(23,26,36,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #10131C;
+      --surface:   #171B27;
+      --sunken:    #1E2331;
+      --ink:       #E6E9F2;
+      --ink-soft:  #A2A9BF;
+      --ink-faint: #737B92;
+      --rule:      #2A3043;
+      --rule-soft: #222736;
+      --accent:    #93A0F0;
+      --accent-dim:#4A548C;
+      --ok:        #6EE7A8;
+      --ok-bg:     #10241A;
+      --warn:      #FBBF24;
+      --warn-bg:   #251C09;
+      --bad:       #F87171;
+      --bad-bg:    #2A1214;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #10131C;
+    --surface:   #171B27;
+    --sunken:    #1E2331;
+    --ink:       #E6E9F2;
+    --ink-soft:  #A2A9BF;
+    --ink-faint: #737B92;
+    --rule:      #2A3043;
+    --rule-soft: #222736;
+    --accent:    #93A0F0;
+    --accent-dim:#4A548C;
+    --ok:        #6EE7A8;
+    --ok-bg:     #10241A;
+    --warn:      #FBBF24;
+    --warn-bg:   #251C09;
+    --bad:       #F87171;
+    --bad-bg:    #2A1214;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    word-break: keep-all;
+  }
+
+  .page { max-width: 1080px; margin: 0 auto; padding: 0 24px 96px; }
+  .measure { max-width: 68ch; }
+
+  /* ── 머리 ── */
+  header.masthead {
+    padding: 56px 0 28px;
+    border-bottom: 2px solid var(--ink);
+    display: flex; flex-wrap: wrap; gap: 20px 40px; align-items: flex-end;
+  }
+  .masthead h1 {
+    font-size: clamp(30px, 5vw, 46px);
+    font-weight: 600; line-height: 1.15; letter-spacing: -.02em;
+    margin: 0; text-wrap: balance; flex: 1 1 340px;
+  }
+  .stamp {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12.5px; line-height: 1.9; color: var(--ink-soft);
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  .stamp b { color: var(--ink); font-weight: 600; }
+
+  .lede { font-size: 18px; color: var(--ink-soft); margin: 26px 0 0; max-width: 62ch; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* ── 절 ── */
+  section { margin-top: 64px; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 500; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent);
+    display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+  }
+  .eyebrow::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  h2 { font-size: 25px; font-weight: 600; letter-spacing: -.015em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font-size: 17px; font-weight: 600; margin: 34px 0 8px; }
+  p { margin: 0 0 14px; }
+  a { color: var(--accent); }
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .875em; font-variant-numeric: tabular-nums;
+  }
+  code { background: var(--sunken); padding: .12em .4em; border-radius: 3px; }
+
+  /* ── 상태 타일 ── */
+  .tiles {
+    display: grid; gap: 1px; background: var(--rule);
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    border: 1px solid var(--rule); border-radius: 8px; overflow: hidden;
+  }
+  .tile { background: var(--surface); padding: 14px 16px 15px; }
+  .tile dt {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: 4px;
+  }
+  .tile dd {
+    margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums; line-height: 1.35;
+  }
+  .tile dd small { display: block; font-size: 11.5px; font-weight: 400; color: var(--ink-soft); letter-spacing: 0; }
+  .tile.is-bad dd { color: var(--bad); }
+
+  /* ── 그림 ── */
+  figure { margin: 26px 0 0; }
+  .frame {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 20px 20px 12px; overflow-x: auto; box-shadow: var(--shadow);
+  }
+  .frame svg { display: block; width: 100%; min-width: 660px; height: auto; color: var(--ink); }
+  figcaption {
+    font-size: 13.5px; color: var(--ink-soft); margin-top: 12px;
+    padding-left: 13px; border-left: 2px solid var(--accent-dim); max-width: 66ch;
+  }
+
+  /* ── 분석 단계 레일 ── */
+  .rail { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+          border-radius: 8px; overflow: hidden; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); margin-top: 22px; }
+  .step { background: var(--surface); padding: 13px 15px 15px; position: relative; }
+  .step::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+    background: var(--accent); opacity: var(--fill, .25);
+  }
+  .step .pct {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+  }
+  .step .nm { font-size: 14px; font-weight: 500; line-height: 1.45; margin-top: 2px; }
+  .step .dt { font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; margin-top: 5px; }
+
+  /* ── 표 ── */
+  .tablewrap { overflow-x: auto; margin-top: 20px; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 500; border-bottom: 1px solid var(--rule);
+  }
+  td.num { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.was { color: var(--ink-faint); }
+  td.now { color: var(--ok); font-weight: 500; }
+
+  /* ── 칩 ── */
+  .chip {
+    display: inline-block; font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .chip.ok   { background: var(--ok-bg);   color: var(--ok);   border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+  .chip.bad  { background: var(--bad-bg);  color: var(--bad);  border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent); }
+
+  /* ── 열린 항목 ── */
+  .issues { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 1px; background: var(--rule);
+            border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .issues li { background: var(--surface); padding: 15px 18px; display: grid; gap: 4px 16px;
+               grid-template-columns: 92px 1fr; align-items: start; }
+  .issues .ttl { font-weight: 600; font-size: 15px; }
+  .issues .body { font-size: 13.5px; color: var(--ink-soft); grid-column: 2; }
+  @media (max-width: 560px) {
+    .issues li { grid-template-columns: 1fr; }
+    .issues .body { grid-column: 1; }
+    .stamp { text-align: left; }
+  }
+
+  .note {
+    margin-top: 22px; padding: 16px 18px; border-radius: 8px;
+    background: var(--warn-bg); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent);
+    font-size: 14.5px; max-width: 68ch;
+  }
+  .note b { color: var(--warn); }
+
+  footer { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--rule);
+           font-size: 13px; color: var(--ink-faint); }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <h1>SEP v2 파이프라인 현황</h1>
+    <div class="stamp">
+      <b>2026-08-20</b> 14:20 KST<br>
+      버전 <b>2.11.0</b> · 번들 <b>index-BiWsxYn8</b><br>
+      Cloud Run <b>00008-d7t</b>
+    </div>
+  </header>
+
+  <p class="lede">
+    오늘 <strong>83분짜리 회의 녹음이 통째로 사라졌다.</strong> 원인을 코드와 로그로 확인하고,
+    같은 날 구조를 바꿔 배포했다. 이 문서는 그 뒤의 상태를 있는 그대로 적은 것이다 —
+    고친 것, 아직 검증되지 않은 것, 여전히 열려 있는 것.
+  </p>
+
+  <!-- ────────────────────────────── 지금 상태 -->
+  <section>
+    <div class="eyebrow">지금 상태</div>
+    <h2>살아 있는 것</h2>
+    <dl class="tiles">
+      <div class="tile"><dt>미팅</dt><dd>36<small>transcript_segments 3,298</small></dd></div>
+      <div class="tile"><dt>고객 · 사용자</dt><dd>36 · 8<small>관리자 2</small></dd></div>
+      <div class="tile"><dt>R2 오디오</dt><dd>68<small>779 MB</small></dd></div>
+      <div class="tile"><dt>상태 점검</dt><dd>정상<small>매시간 · 최근 3회 성공</small></dd></div>
+      <div class="tile is-bad"><dt>R2 오프사이트 백업</dt><dd>실패<small>8/19부터 매 회차</small></dd></div>
+      <div class="tile"><dt>DB 응답</dt><dd>529 ms<small>Hyperdrive → Neon</small></dd></div>
+    </dl>
+  </section>
+
+  <!-- ────────────────────────────── 메인 경로 -->
+  <section>
+    <div class="eyebrow">메인 로직 · 하나</div>
+    <h2>녹음 한 건이 서버에 남기까지</h2>
+    <div class="measure">
+      <p>
+        마이크 하나에서 <strong>두 갈래</strong>가 갈라진다. 위쪽은 보관되는 경로,
+        아래쪽은 화면에만 쓰이고 <strong>사라지는</strong> 경로다.
+        이 구분이 사고 조사에서 결정적이었다 — 실시간 자막이 83분 내내 정상으로 돌았지만,
+        그쪽에는 회의를 되살릴 것이 한 조각도 남지 않는다.
+      </p>
+    </div>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 960 392" role="img"
+             aria-label="마이크 스트림이 두 갈래로 갈라진다. 위쪽 보관 경로는 브라우저의 10분 구간이 Worker를 거쳐 R2와 Neon에 짝으로 저장되고 TranscribeWorkflow가 전사한다. 아래쪽 실시간 경로는 Cloud Run을 거쳐 Deepgram 또는 Google로 가지만 화면에만 표시되고 저장되지 않는다.">
+          <defs>
+            <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#92400E"/>
+            </marker>
+          </defs>
+
+          <!-- 소스 -->
+          <rect x="8" y="150" width="120" height="66" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="68" y="176" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">마이크</text>
+          <text x="68" y="195" text-anchor="middle" font-size="11" fill="currentColor" opacity=".62">getUserMedia</text>
+
+          <!-- 갈래 -->
+          <path d="M128 175 L168 175 L168 74" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+          <path d="M128 191 L168 191 L168 292" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+
+          <!-- ── 보관 경로 ── -->
+          <text x="188" y="26" font-size="11" font-weight="600" fill="currentColor" opacity=".55" letter-spacing="1">보관되는 경로</text>
+          <rect x="188" y="46" width="146" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="261" y="70" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">MediaRecorder</text>
+          <text x="261" y="88" text-anchor="middle" font-size="11" fill="currentColor" opacity=".62">10분마다 갈아탄다</text>
+
+          <line x1="334" y1="75" x2="392" y2="75" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+          <text x="363" y="66" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">구간 파일</text>
+
+          <rect x="392" y="46" width="140" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="462" y="70" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Worker</text>
+          <text x="462" y="88" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">POST /recordings</text>
+
+          <!-- 두 저장소 -->
+          <path d="M532 62 L578 62 L578 34" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+          <path d="M532 88 L578 88 L578 112" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+          <rect x="592" y="12" width="152" height="44" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="668" y="31" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">① R2 객체</text>
+          <text x="668" y="47" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">recordings/&lt;id&gt;</text>
+          <rect x="592" y="98" width="152" height="44" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="668" y="117" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">② Neon 행</text>
+          <text x="668" y="133" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">meeting_recordings</text>
+
+          <line x1="744" y1="120" x2="800" y2="120" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+          <text x="772" y="111" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">즉시 큐</text>
+          <rect x="800" y="46" width="152" height="94" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="876" y="72" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Transcribe</text>
+          <text x="876" y="88" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Workflow</text>
+          <text x="876" y="108" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">gpt-4o-transcribe</text>
+          <text x="876" y="122" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">-diarize</text>
+
+          <!-- 가운데 구분 -->
+          <line x1="188" y1="182" x2="952" y2="182" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5" opacity=".28"/>
+
+          <!-- ── 실시간 경로 ── -->
+          <text x="188" y="212" font-size="11" font-weight="600" fill="#92400E" letter-spacing="1">저장되지 않는 경로</text>
+          <rect x="188" y="228" width="146" height="58" rx="7" fill="none" stroke="#92400E" stroke-width="1.5"/>
+          <text x="261" y="252" text-anchor="middle" font-size="12.5" font-weight="600" fill="#92400E">AudioWorklet</text>
+          <text x="261" y="270" text-anchor="middle" font-size="10.5" fill="#92400E" opacity=".8">16kHz 모노 PCM</text>
+
+          <line x1="334" y1="257" x2="392" y2="257" stroke="#92400E" stroke-width="1.5" marker-end="url(#arw)"/>
+          <text x="363" y="248" text-anchor="middle" font-size="10.5" fill="#92400E" opacity=".8">wss</text>
+
+          <rect x="392" y="228" width="140" height="58" rx="7" fill="none" stroke="#92400E" stroke-width="1.5"/>
+          <text x="462" y="252" text-anchor="middle" font-size="12.5" font-weight="600" fill="#92400E">Cloud Run</text>
+          <text x="462" y="270" text-anchor="middle" font-size="10.5" fill="#92400E" opacity=".8">stream-service</text>
+
+          <path d="M532 244 L578 244 L578 216" fill="none" stroke="#92400E" stroke-width="1.5" marker-end="url(#arw)"/>
+          <path d="M532 270 L578 270 L578 296" fill="none" stroke="#92400E" stroke-width="1.5" marker-end="url(#arw)"/>
+          <rect x="592" y="196" width="152" height="42" rx="7" fill="none" stroke="#92400E" stroke-width="1.5"/>
+          <text x="668" y="213" text-anchor="middle" font-size="11.5" font-weight="600" fill="#92400E">Deepgram nova-2</text>
+          <text x="668" y="229" text-anchor="middle" font-size="10" fill="#92400E" opacity=".8">주경로 · 화자 구분 있음</text>
+          <rect x="592" y="282" width="152" height="42" rx="7" fill="none" stroke="#92400E" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="668" y="299" text-anchor="middle" font-size="11.5" font-weight="600" fill="#92400E">Google STT</text>
+          <text x="668" y="315" text-anchor="middle" font-size="10" fill="#92400E" opacity=".8">백업 · 240초마다 회전</text>
+
+          <line x1="744" y1="257" x2="800" y2="257" stroke="#92400E" stroke-width="1.5" marker-end="url(#arw)"/>
+          <rect x="800" y="228" width="152" height="58" rx="7" fill="none" stroke="#92400E" stroke-width="1.5"/>
+          <text x="876" y="252" text-anchor="middle" font-size="12.5" font-weight="600" fill="#92400E">화면 자막</text>
+          <text x="876" y="270" text-anchor="middle" font-size="10.5" fill="#92400E" opacity=".8">최근 300줄만</text>
+
+          <path d="M876 286 L876 340" fill="none" stroke="#92400E" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <line x1="862" y1="348" x2="890" y2="376" stroke="#92400E" stroke-width="2"/>
+          <line x1="890" y1="348" x2="862" y2="376" stroke="#92400E" stroke-width="2"/>
+          <text x="840" y="368" text-anchor="end" font-size="12" font-weight="600" fill="#92400E">어디에도 저장되지 않는다</text>
+        </svg>
+      </div>
+      <figcaption>
+        마이크 하나에서 두 갈래. 위쪽만 남는다. R2 에 <b>먼저</b> 쓰고 Neon 행을 <b>그다음</b> 만드는
+        순서가 중요하다 — 그 사이에 끊기면 “파일은 있고 행은 없는” 고아가 되고,
+        오늘 대조에서 고아는 <b>0건</b>이었다. 그래서 “서버가 잃은 것이 아니다” 를 단정할 수 있었다.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ────────────────────────────── 분석 -->
+  <section>
+    <div class="eyebrow">메인 로직 · 둘</div>
+    <h2>분석은 여섯 단계로 간다</h2>
+    <div class="measure">
+      <p>
+        미팅을 만들고 <code>POST /meetings/:id/analyze</code> 를 부르면 AnalysisWorkflow 가 뜬다.
+        단계마다 재시도가 따로 걸려 있어 <strong>리포트에서 실패해도 전사를 다시 하지 않는다.</strong>
+        진행률은 화면이 그대로 읽는 값이다.
+      </p>
+    </div>
+
+    <div class="rail">
+      <div class="step" style="--fill:.20"><div class="pct">10%</div><div class="nm">오디오 확보</div>
+        <div class="dt">아직 전사 안 된 녹음을 직접 집는다. 20초 × 10회까지 기다리고, 그래도 안 되면 있는 것만으로 간다</div></div>
+      <div class="step" style="--fill:.36"><div class="pct">45%</div><div class="nm">음성 인식 · 화자 분리</div>
+        <div class="dt">diarize 실패 시 whisper-1 로 떨어진다 (화자 정보 없음)</div></div>
+      <div class="step" style="--fill:.52"><div class="pct">60%</div><div class="nm">화자 역할 판정</div>
+        <div class="dt">transcript_segments 로 저장. 녹음 id 를 함께 적어 재생 위치를 잡는다</div></div>
+      <div class="step" style="--fill:.68"><div class="pct">75%</div><div class="nm">기본 분석</div>
+        <div class="dt">고객 니즈 · 딜 신호 · 점수. analysis_results 한 행</div></div>
+      <div class="step" style="--fill:.86"><div class="pct">95%</div><div class="nm">리포트 · 코칭</div>
+        <div class="dt">전사문이 있을 때만. 없으면 “녹음이 없어 제목만으로 분석” 이라고 적고 끝낸다</div></div>
+      <div class="step" style="--fill:1"><div class="pct">100%</div><div class="nm">완료</div>
+        <div class="dt">화면이 3초마다 보던 폴링을 멈춘다</div></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── 바뀐 것 -->
+  <section>
+    <div class="eyebrow">오늘 바뀐 것</div>
+    <h2>끝나고 한 번에 → 회의 중에 계속</h2>
+    <div class="measure">
+      <p>
+        예전에는 회의 내내 MediaRecorder 하나로 받아 두고 <b>완료</b> 를 누른 뒤에야 통째로 변환해 올렸다.
+        그 변환이 파일 전체를 펴는 방식이라 길이에 비례해 메모리를 먹었고,
+        83분에서 약 <strong>1.9GB</strong> 가 되어 아이폰 탭을 죽였다.
+        죽는 순간 <strong>서버에는 아무것도 없었다.</strong>
+      </p>
+    </div>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 960 250" role="img"
+             aria-label="83분 회의를 시간축으로 비교한다. 전에는 완료를 누를 때까지 서버에 아무것도 도달하지 않았고 변환 단계에서 죽어 전부를 잃었다. 후에는 10분마다 서버에 도달점이 찍힌다.">
+          <defs>
+            <marker id="up" viewBox="0 0 10 10" refX="5" refY="1" markerWidth="8" markerHeight="8" orient="auto">
+              <path d="M0,10 L5,0 L10,10 z" fill="#166534"/>
+            </marker>
+          </defs>
+
+          <!-- 서버 레일 -->
+          <text x="8" y="34" font-size="11" font-weight="600" fill="currentColor" opacity=".55" letter-spacing="1">서버 도달</text>
+          <line x1="96" y1="46" x2="944" y2="46" stroke="currentColor" stroke-width="1" opacity=".3"/>
+
+          <!-- 눈금 -->
+          <text x="96" y="240" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">0분</text>
+          <text x="376" y="240" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">30분</text>
+          <text x="656" y="240" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">60분</text>
+          <text x="871" y="240" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">83분 · 완료</text>
+          <line x1="871" y1="70" x2="871" y2="228" stroke="currentColor" stroke-width="1" stroke-dasharray="3 4" opacity=".35"/>
+
+          <!-- 전 -->
+          <text x="8" y="104" font-size="13" font-weight="600" fill="currentColor">전</text>
+          <rect x="96" y="84" width="775" height="30" rx="4" fill="currentColor" opacity=".1"/>
+          <rect x="96" y="84" width="775" height="30" rx="4" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
+          <text x="484" y="104" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".75">브라우저 메모리에만 — 서버에 아무것도 없다</text>
+          <rect x="871" y="84" width="60" height="30" rx="4" fill="#991B1B" opacity=".16"/>
+          <rect x="871" y="84" width="60" height="30" rx="4" fill="none" stroke="#991B1B" stroke-width="1.4"/>
+          <text x="901" y="76" text-anchor="middle" font-size="10.5" font-weight="600" fill="#991B1B">변환</text>
+          <line x1="887" y1="126" x2="915" y2="150" stroke="#991B1B" stroke-width="2"/>
+          <line x1="915" y1="126" x2="887" y2="150" stroke="#991B1B" stroke-width="2"/>
+          <text x="866" y="146" text-anchor="end" font-size="11.5" font-weight="600" fill="#991B1B">1.9GB · 탭이 죽는다 → 83분 전부 유실</text>
+
+          <!-- 후 -->
+          <text x="8" y="188" font-size="13" font-weight="600" fill="currentColor">후</text>
+          <rect x="96" y="168" width="775" height="30" rx="4" fill="#166534" opacity=".1"/>
+          <rect x="96" y="168" width="775" height="30" rx="4" fill="none" stroke="#166534" stroke-width="1.2"/>
+          <line x1="189" y1="168" x2="189" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="282" y1="168" x2="282" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="375" y1="168" x2="375" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="468" y1="168" x2="468" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="561" y1="168" x2="561" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="654" y1="168" x2="654" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="747" y1="168" x2="747" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <line x1="840" y1="168" x2="840" y2="198" stroke="#166534" stroke-width="1" opacity=".5"/>
+          <text x="484" y="216" text-anchor="middle" font-size="11" fill="#166534">구간 1 … 구간 9 — 각 10분, 그대로 올린다 (변환 없음)</text>
+
+          <!-- 도달 화살표 -->
+          <line x1="189" y1="166" x2="189" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="282" y1="166" x2="282" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="375" y1="166" x2="375" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="468" y1="166" x2="468" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="561" y1="166" x2="561" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="654" y1="166" x2="654" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="747" y1="166" x2="747" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <line x1="840" y1="166" x2="840" y2="52" stroke="#166534" stroke-width="1.4" marker-end="url(#up)"/>
+          <text x="189" y="66" text-anchor="middle" font-size="10" fill="#166534" opacity=".9">10분</text>
+        </svg>
+      </div>
+      <figcaption>
+        바뀐 것은 화살표 하나다 — 서버에 닿는 시점. 전에는 그 화살표가 <b>맨 끝에 하나</b>였고,
+        하필 그 자리에서 죽었다. 지금은 10분마다 하나씩 찍힌다.
+      </figcaption>
+    </figure>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>무엇이</th><th>전</th><th>후</th></tr></thead>
+        <tbody>
+          <tr><td>서버에 처음 닿는 시점</td><td class="was">완료 버튼을 누른 뒤</td><td class="now">녹음 10분</td></tr>
+          <tr><td>83분 회의에서 잃을 수 있는 최대치</td><td class="was">83분 전부</td><td class="now">마지막 10분</td></tr>
+          <tr><td>브라우저가 한 번에 펴는 크기</td><td class="was num">약 1.9 GB</td><td class="now">없음 — 구간을 그대로 올린다</td></tr>
+          <tr><td>회의가 끝난 시점의 전사</td><td class="was">0건 (그때부터 시작)</td><td class="now">마지막 구간만 남음</td></tr>
+          <tr><td>녹음 0건일 때</td><td class="was">미팅이 “분석 완료” 로 남는다</td><td class="now">만들지 않는다</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── 사고 -->
+  <section>
+    <div class="eyebrow">오늘 오전</div>
+    <h2>무엇이 언제 끊겼나</h2>
+    <div class="measure">
+      <p>
+        Worker 요청 통계와 Cloud Run 로그를 겹쳐 보면 시각이 정확히 맞는다.
+        25초마다 도는 실시간 코칭이 <strong>회의가 살아 있다는 심장 박동</strong> 노릇을 했다 —
+        그것이 멈춘 자리가 곧 화면이 죽은 자리다.
+      </p>
+    </div>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 960 206" role="img"
+             aria-label="오전 9시 53분 녹음이 시작되고 9시 56분부터 11시 16분까지 분당 두 건의 요청이 끊기지 않고 이어진다. 11시 16분 완료를 누른 뒤 11시 17분부터 18분까지 요청이 0건이 되고, 11시 19분에 녹음 0건인 미팅이 생성된다.">
+          <defs>
+            <pattern id="beat" width="9" height="8" patternUnits="userSpaceOnUse">
+              <line x1="1" y1="0" x2="1" y2="8" stroke="#3949AB" stroke-width="1.6" opacity=".55"/>
+            </pattern>
+          </defs>
+
+          <line x1="70" y1="118" x2="940" y2="118" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <text x="70" y="150" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">09:50</text>
+          <text x="331" y="150" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">10:20</text>
+          <text x="592" y="150" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">10:50</text>
+          <text x="853" y="150" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".5">11:20</text>
+
+          <!-- 요청 밴드 -->
+          <rect x="122" y="94" width="696" height="24" fill="url(#beat)"/>
+          <rect x="122" y="94" width="696" height="24" fill="none" stroke="#3949AB" stroke-width="1" opacity=".5"/>
+          <text x="470" y="86" text-anchor="middle" font-size="11" font-weight="600" fill="#3949AB">분당 2건 · 80분간 한 번도 끊기지 않음 (실시간 코칭)</text>
+
+          <!-- 공백 -->
+          <rect x="818" y="94" width="26" height="24" fill="#991B1B" opacity=".14"/>
+          <rect x="818" y="94" width="26" height="24" fill="none" stroke="#991B1B" stroke-width="1.3"/>
+
+          <!-- 재개 -->
+          <rect x="844" y="94" width="10" height="24" fill="#3949AB" opacity=".55"/>
+          <rect x="879" y="94" width="6" height="24" fill="#3949AB" opacity=".55"/>
+
+          <!-- 표시 -->
+          <line x1="96" y1="94" x2="96" y2="42" stroke="currentColor" stroke-width="1" opacity=".45"/>
+          <circle cx="96" cy="94" r="3.5" fill="currentColor"/>
+          <text x="96" y="34" text-anchor="middle" font-size="11" fill="currentColor">09:53 녹음 시작</text>
+
+          <line x1="818" y1="94" x2="818" y2="58" stroke="currentColor" stroke-width="1" opacity=".45"/>
+          <circle cx="818" cy="94" r="3.5" fill="currentColor"/>
+          <text x="818" y="50" text-anchor="middle" font-size="11" fill="currentColor">11:16 완료</text>
+
+          <line x1="831" y1="118" x2="831" y2="168" stroke="#991B1B" stroke-width="1" opacity=".6"/>
+          <text x="831" y="184" text-anchor="middle" font-size="11" font-weight="600" fill="#991B1B">11:17–11:18 요청 0건 — 화면이 죽었다</text>
+
+          <line x1="849" y1="94" x2="849" y2="34" stroke="#92400E" stroke-width="1" opacity=".6"/>
+          <circle cx="849" cy="94" r="3.5" fill="#92400E"/>
+          <text x="944" y="26" text-anchor="end" font-size="11" font-weight="600" fill="#92400E">11:19 미팅 생성 — 녹음 0건</text>
+          <text x="944" y="42" text-anchor="end" font-size="10.5" fill="#92400E" opacity=".85">10초 뒤 “분석 완료” · overall 70</text>
+        </svg>
+      </div>
+      <figcaption>
+        요청이 <b>끊기지 않고</b> 이어지다 11:17 에 딱 멈춘다. 이 공백이 결정적이었다 —
+        업로드는 시작 즉시 요청을 보내므로, 요청이 0건이면 변환이 끝나지 않았다는 뜻이고,
+        끝나지 않았다면 제출 버튼은 잠겨 있어야 한다. <b>그런데 제출은 됐다.</b>
+        그 사이에 화면이 다시 시작된 것 외에는 설명이 없다.
+      </figcaption>
+    </figure>
+
+    <div class="note">
+      <b>안전망은 처음부터 없었다.</b> 아이폰 사파리의 보관함을 열어 보니 조각이 <b>0개</b>였다.
+      83분이면 15초마다 약 330조각이 쌓였어야 하고 커밋된 쓰기는 탭이 죽어도 남는다.
+      iOS 가 <code>MediaRecorder.start(timeslice)</code> 의 인자를 무시해
+      <code>stop()</code> 때 한 번만 데이터를 주는 것으로 보인다 — 그러면 중간 저장이 생길 수가 없다.
+      같은 날 2초짜리가 정상 업로드된 것과도 어긋나지 않는다. <b>짧은 녹음에서는 드러나지 않는 결함이다.</b>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────── 오늘 오후 -->
+  <section>
+    <div class="eyebrow">오늘 오후 · 실측</div>
+    <h2>48분 회의는 통과했다 — 다만 옛 경로로</h2>
+    <div class="measure">
+      <p>
+        13:07 에 시작한 48분 회의가 끝까지 올라가 분석까지 마쳤다. 그런데 녹음 라벨이
+        <code>파트 1/5</code> 다 — <strong>새 구간 녹음이 아니라 옛 경로</strong>다.
+        구간 녹음은 13:04 에 배포됐지만, 이미 열려 있던 사파리 탭이 옛 번들을 그대로 들고 있었다.
+      </p>
+      <p>
+        즉 오늘 확인된 것은 “48분은 옛 경로로도 버틴다” 까지다.
+        8/18 에 58분이 통과하고 72분이 <code>파트 1/7</code> 하나만 남긴 것과 같은 선 위에 있다.
+        <strong>새 구조는 아직 기기에서 한 번도 돌지 않았다.</strong>
+      </p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>날짜</th><th>길이</th><th>경로</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td class="num">08-18 12:34</td><td class="num">약 58분</td><td>옛 경로 · 6조각</td><td><span class="chip ok">전부 통과</span></td></tr>
+          <tr><td class="num">08-18 12:46</td><td class="num">약 72분</td><td>옛 경로 · 7조각</td><td><span class="chip warn">파트 1/7 만</span></td></tr>
+          <tr><td class="num">08-20 09:53</td><td class="num">83분</td><td>옛 경로</td><td><span class="chip bad">전량 유실</span></td></tr>
+          <tr><td class="num">08-20 13:07</td><td class="num">48분</td><td>옛 경로 · 5조각</td><td><span class="chip ok">전부 통과 · overall 74</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>13:07 회의가 남긴 것</h3>
+    <dl class="tiles">
+      <div class="tile"><dt>녹음</dt><dd>5구간<small>합계 48.3분</small></dd></div>
+      <div class="tile"><dt>전사</dt><dd>33,083자<small>556 세그먼트</small></dd></div>
+      <div class="tile"><dt>분석</dt><dd>74점<small>positive · 액션 2건</small></dd></div>
+      <div class="tile is-bad"><dt>화자 라벨</dt><dd>12명<small>실제로는 2~3명</small></dd></div>
+    </dl>
+  </section>
+
+  <!-- ────────────────────────────── 열린 것 -->
+  <section>
+    <div class="eyebrow">열려 있는 것</div>
+    <h2>아직 손대지 않은 것</h2>
+    <ul class="issues">
+      <li>
+        <span class="chip bad">확인 필요</span>
+        <span class="ttl">새 구간 녹음이 기기에서 한 번도 돌지 않았다</span>
+        <span class="body">다음 회의 전에 사파리를 완전히 닫았다 열어 새 번들을 받아야 한다.
+          녹음 화면의 <b>“서버에 N구간 저장됨”</b> 이 10분마다 올라가면 확인된 것이다.</span>
+      </li>
+      <li>
+        <span class="chip bad">위험</span>
+        <span class="ttl">R2 오프사이트 백업이 8/19부터 매 회차 실패</span>
+        <span class="body">6시간마다 도는데 전부 실패한다. <code>CLOUDFLARE_API_TOKEN</code> 이
+          <code>Object</code> 범위라 R2 REST API 가 받지 않는다 — <code>Admin Read &amp; Write</code> 로 바꿔야 한다.
+          그동안 올라온 녹음에는 <b>사본이 없다.</b></span>
+      </li>
+      <li>
+        <span class="chip warn">주의</span>
+        <span class="ttl">화자 번호가 구간마다 새로 매겨진다</span>
+        <span class="body">오늘 48분 5구간이 화자 <b>12명</b>으로 갈렸다. 구간을 짧게 할수록 심해지므로
+          10분보다 더 줄이기 어렵다. 구간 사이에 화자를 이어 붙이는 일이 따로 필요하다.</span>
+      </li>
+      <li>
+        <span class="chip warn">주의</span>
+        <span class="ttl">첫 10분은 여전히 서버에 아무것도 없다</span>
+        <span class="body">그 사이에 탭이 죽으면 그만큼은 잃는다. iOS 에서는 기기 백업도 돌지 않으므로
+          완충이 없다. 줄이려면 위의 화자 문제와 맞바꿔야 한다.</span>
+      </li>
+      <li>
+        <span class="chip warn">주의</span>
+        <span class="ttl">Workers 로그를 나중에 볼 수 없다</span>
+        <span class="body"><code>[observability]</code> 는 켜져 있으나 API 토큰에 조회 권한이 없어
+          오늘 조사에서 <code>10000 Authentication error</code> 로 막혔다. 권한만 더하면
+          다음부터는 <code>rid</code> 로 요청 하나를 통째로 따라갈 수 있다.</span>
+      </li>
+      <li>
+        <span class="chip ok">낮음</span>
+        <span class="ttl">sort_order 가 draft 개수로 정해진다</span>
+        <span class="body">업로드가 큐 하나로 직렬이라 지금은 안전하다. 다만 <b>녹음 도중에 draft 를 지우면</b>
+          번호가 겹칠 수 있다. 남아 있는 낡은 draft 8건도 함께 정리할 값어치가 있다.</span>
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    조사 기록 <span class="mono">docs/2026-08-20-recording-lost-83min.md</span> ·
+    변경 기록 <span class="mono">CHANGELOG.md [2.9.0]–[2.11.0]</span> ·
+    이 문서는 2026-08-20 14:20 KST 의 상태다. 낡는 것이 정상이고 관리하지 않는다.
+  </footer>
+
+</div>

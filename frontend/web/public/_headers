@@ -1,0 +1,7 @@
+# nginx 뒤에 있을 때는 아무 헤더도 붙지 않았다. 공개 호스팅으로 나가면 최소한은 필요하다.
+# CSP 는 넣지 않았다 — MUI/emotion 이 인라인 스타일을 쓰므로 실측 없이 걸면 화면이 깨진다.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), camera=(), microphone=(self)

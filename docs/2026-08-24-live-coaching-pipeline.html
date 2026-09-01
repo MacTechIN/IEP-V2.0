@@ -1,0 +1,389 @@
+<title>실시간 코칭 해부</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+
+<style>
+  /* 팔레트는 제품이 이미 쓰는 값이다 — 코칭 카드의 정상·주의·위험·기회 네 색 그대로. */
+  :root {
+    --bg:#F6F7FB; --surface:#FFF; --sunken:#EDEFF6;
+    --ink:#171A24; --ink-soft:#5A6076; --ink-faint:#878DA3;
+    --rule:#DCDFEC; --rule-soft:#E9EBF3;
+    --accent:#3949AB; --accent-dim:#8A93D4;
+    --ok:#166534;  --ok-bg:#F0FDF4;  --ok-line:#86EFAC;
+    --warn:#92400E; --warn-bg:#FFFBEB; --warn-line:#FCD34D;
+    --bad:#991B1B;  --bad-bg:#FEF2F2;  --bad-line:#FCA5A5;
+    --opp:#1E40AF;  --opp-bg:#EFF6FF;  --opp-line:#93C5FD;
+    --shadow:0 1px 2px rgba(23,26,36,.06), 0 8px 24px -12px rgba(23,26,36,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#10131C; --surface:#171B27; --sunken:#1E2331;
+      --ink:#E6E9F2; --ink-soft:#A2A9BF; --ink-faint:#737B92;
+      --rule:#2A3043; --rule-soft:#222736;
+      --accent:#93A0F0; --accent-dim:#4A548C;
+      --ok:#6EE7A8;  --ok-bg:#10241A;  --ok-line:#1F6B42;
+      --warn:#FBBF24; --warn-bg:#251C09; --warn-line:#7A5A12;
+      --bad:#F87171;  --bad-bg:#2A1214;  --bad-line:#7F2A2A;
+      --opp:#93C5FD;  --opp-bg:#0F1D33;  --opp-line:#2C4C86;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#10131C; --surface:#171B27; --sunken:#1E2331;
+    --ink:#E6E9F2; --ink-soft:#A2A9BF; --ink-faint:#737B92;
+    --rule:#2A3043; --rule-soft:#222736;
+    --accent:#93A0F0; --accent-dim:#4A548C;
+    --ok:#6EE7A8;  --ok-bg:#10241A;  --ok-line:#1F6B42;
+    --warn:#FBBF24; --warn-bg:#251C09; --warn-line:#7A5A12;
+    --bad:#F87171;  --bad-bg:#2A1214;  --bad-line:#7F2A2A;
+    --opp:#93C5FD;  --opp-bg:#0F1D33;  --opp-line:#2C4C86;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"IBM Plex Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+    font-size:16px; line-height:1.75; -webkit-font-smoothing:antialiased; word-break:keep-all;
+  }
+  .page { max-width:1080px; margin:0 auto; padding:0 24px 96px; }
+  .measure { max-width:68ch; }
+
+  header.masthead {
+    padding:56px 0 26px; border-bottom:2px solid var(--ink);
+    display:flex; flex-wrap:wrap; gap:18px 40px; align-items:flex-end;
+  }
+  .masthead h1 { font-size:clamp(30px,5vw,46px); font-weight:600; line-height:1.15;
+                 letter-spacing:-.02em; margin:0; text-wrap:balance; flex:1 1 320px; }
+  .stamp { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px; line-height:1.9;
+           color:var(--ink-soft); font-variant-numeric:tabular-nums; text-align:right; }
+  .stamp b { color:var(--ink); font-weight:600; }
+  .lede { font-size:18px; color:var(--ink-soft); margin:26px 0 0; max-width:62ch; }
+  .lede strong { color:var(--ink); font-weight:600; }
+
+  section { margin-top:64px; }
+  .eyebrow { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px; font-weight:500;
+             letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+             display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .eyebrow::after { content:""; flex:1; height:1px; background:var(--rule); }
+  h2 { font-size:25px; font-weight:600; letter-spacing:-.015em; margin:0 0 14px; text-wrap:balance; }
+  h3 { font-size:17px; font-weight:600; margin:32px 0 8px; }
+  p { margin:0 0 14px; }
+  code { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.875em;
+         background:var(--sunken); padding:.12em .4em; border-radius:3px; }
+
+  figure { margin:26px 0 0; }
+  .frame { background:var(--surface); border:1px solid var(--rule); border-radius:10px;
+           padding:20px 20px 12px; overflow-x:auto; box-shadow:var(--shadow); }
+  .frame svg { display:block; width:100%; min-width:680px; height:auto; color:var(--ink); }
+  figcaption { font-size:13.5px; color:var(--ink-soft); margin-top:12px; padding-left:13px;
+               border-left:2px solid var(--accent-dim); max-width:66ch; }
+
+  .levels { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); margin-top:22px; }
+  .lv { border-radius:9px; padding:14px 16px; border:2px solid; }
+  .lv h4 { margin:0 0 4px; font-size:15px; font-weight:700; }
+  .lv p { margin:0; font-size:13px; line-height:1.6; }
+  .lv.ok   { background:var(--ok-bg);   border-color:var(--ok-line);   color:var(--ok); }
+  .lv.warn { background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn); }
+  .lv.bad  { background:var(--bad-bg);  border-color:var(--bad-line);  color:var(--bad); }
+  .lv.opp  { background:var(--opp-bg);  border-color:var(--opp-line);  color:var(--opp); }
+
+  .tablewrap { overflow-x:auto; margin-top:20px; }
+  table { border-collapse:collapse; width:100%; min-width:540px; font-size:14.5px; }
+  th,td { text-align:left; padding:10px 14px 10px 0; border-bottom:1px solid var(--rule-soft); vertical-align:top; }
+  thead th { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:10.5px; letter-spacing:.1em;
+             text-transform:uppercase; color:var(--ink-faint); font-weight:500; border-bottom:1px solid var(--rule); }
+  td.num { font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  pre { background:var(--sunken); border:1px solid var(--rule); border-radius:8px; padding:14px 16px;
+        overflow-x:auto; font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:12.5px;
+        line-height:1.7; margin:18px 0 0; }
+  pre b { color:var(--accent); font-weight:600; }
+
+  .gaps { list-style:none; padding:0; margin:22px 0 0; display:grid; gap:1px; background:var(--rule);
+          border:1px solid var(--rule); border-radius:8px; overflow:hidden; }
+  .gaps li { background:var(--surface); padding:15px 18px; }
+  .gaps .t { font-weight:600; font-size:15px; display:block; margin-bottom:3px; }
+  .gaps .d { font-size:13.5px; color:var(--ink-soft); }
+  .gaps .d b { color:var(--warn); font-weight:600; }
+
+  footer { margin-top:72px; padding-top:20px; border-top:1px solid var(--rule);
+           font-size:13px; color:var(--ink-faint); }
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <h1>실시간 코칭 해부</h1>
+    <div class="stamp">
+      <b>2026-08-24</b> · v2.15.0<br>
+      25초 주기 · whisper-1 → gpt-4o-mini<br>
+      기록 <b>0건</b>
+    </div>
+  </header>
+
+  <p class="lede">
+    녹음 중 25초마다 대화 한 조각을 떠서 <strong>지금 무슨 일이 벌어지고 있는지</strong> 판정하고,
+    그 자리에서 할 말을 띄운다. 이 문서는 그 경로를 코드 그대로 따라간 것이다 —
+    무엇이 어디서 계산되고, <strong>무엇이 남지 않는지</strong>.
+  </p>
+
+  <!-- ── 한 주기 ── -->
+  <section>
+    <div class="eyebrow">한 주기</div>
+    <h2>25초에 벌어지는 일</h2>
+    <div class="measure">
+      <p>
+        녹음용 <code>MediaRecorder</code> 와 <strong>별개의</strong> 두 번째 레코더가 같은 마이크
+        스트림에서 25초를 뜬다. 끝나면 서버로 보내고, <strong>응답을 받은 뒤에야</strong> 다음 주기를 건다 —
+        고정 간격이 아니라 꼬리물기다. 그래서 서버가 느리면 주기가 저절로 늘어나고 요청이 겹치지 않는다.
+      </p>
+    </div>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 960 300" role="img"
+             aria-label="브라우저가 25초 클립을 떠서 Worker로 보내면 whisper-1이 전사하고 gpt-4o-mini가 판정해 level, reason, script, action을 돌려준다. 클립과 판정 결과는 저장되지 않는다.">
+          <defs>
+            <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+            <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#92400E"/>
+            </marker>
+          </defs>
+
+          <text x="8" y="22" font-size="11" font-weight="600" fill="currentColor" opacity=".55" letter-spacing="1">브라우저</text>
+          <rect x="8" y="34" width="150" height="62" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="83" y="58" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">두 번째 레코더</text>
+          <text x="83" y="76" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">25초 클립 · webm</text>
+          <text x="83" y="112" text-anchor="middle" font-size="10" fill="currentColor" opacity=".5">녹음 본체와 별개</text>
+
+          <line x1="158" y1="65" x2="216" y2="65" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="187" y="56" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">audio</text>
+          <text x="187" y="82" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">+context</text>
+
+          <text x="216" y="22" font-size="11" font-weight="600" fill="currentColor" opacity=".55" letter-spacing="1">Worker · POST /api/v2/risk</text>
+          <rect x="216" y="34" width="700" height="132" rx="9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4" opacity=".45"/>
+
+          <rect x="236" y="56" width="164" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="318" y="80" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">whisper-1</text>
+          <text x="318" y="98" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">전사 · 화자 없음</text>
+
+          <line x1="400" y1="85" x2="452" y2="85" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="426" y="76" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">text</text>
+
+          <rect x="452" y="56" width="176" height="58" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="540" y="80" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">gpt-4o-mini</text>
+          <text x="540" y="98" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">temp 0.3 · JSON 강제</text>
+
+          <line x1="628" y1="85" x2="680" y2="85" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+
+          <rect x="680" y="46" width="216" height="78" rx="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <text x="788" y="66" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor">level · reason</text>
+          <text x="788" y="84" text-anchor="middle" font-size="11.5" font-weight="600" fill="currentColor">script · action</text>
+          <text x="788" y="106" text-anchor="middle" font-size="10" fill="currentColor" opacity=".62">+ transcript (다음 주기 문맥)</text>
+
+          <!-- 되돌아오는 길 -->
+          <path d="M788 124 L788 152 L83 152 L83 100" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#a)"/>
+          <text x="440" y="146" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".62">응답을 받은 뒤에야 다음 주기를 건다 (꼬리물기)</text>
+
+          <!-- 버려지는 것 -->
+          <line x1="8" y1="196" x2="952" y2="196" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5" opacity=".28"/>
+          <text x="8" y="222" font-size="11" font-weight="600" fill="#92400E" letter-spacing="1">남지 않는 것</text>
+          <rect x="8" y="234" width="200" height="46" rx="7" fill="none" stroke="#92400E" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="108" y="253" text-anchor="middle" font-size="11.5" font-weight="600" fill="#92400E">25초 오디오 클립</text>
+          <text x="108" y="270" text-anchor="middle" font-size="10" fill="#92400E" opacity=".8">R2 에도 디스크에도 안 쓴다</text>
+
+          <rect x="228" y="234" width="200" height="46" rx="7" fill="none" stroke="#92400E" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="328" y="253" text-anchor="middle" font-size="11.5" font-weight="600" fill="#92400E">전사문</text>
+          <text x="328" y="270" text-anchor="middle" font-size="10" fill="#92400E" opacity=".8">응답에만 실려 화면으로</text>
+
+          <rect x="448" y="234" width="200" height="46" rx="7" fill="none" stroke="#92400E" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text x="548" y="253" text-anchor="middle" font-size="11.5" font-weight="600" fill="#92400E">판정 결과</text>
+          <text x="548" y="270" text-anchor="middle" font-size="10" fill="#92400E" opacity=".8">DB 행이 없다</text>
+
+          <text x="672" y="262" font-size="12" font-weight="600" fill="#92400E">→ 맞았는지 틀렸는지 알 방법이 없다</text>
+        </svg>
+      </div>
+      <figcaption>
+        위쪽은 25초마다 도는 길, 아래쪽은 <b>그 길이 아무것도 남기지 않는다</b>는 사실이다.
+        클립을 저장하지 않는 것은 설계 의도였다(<code>services/risk.ts</code> 머리주석) —
+        그런데 <b>판정 결과까지 함께 사라진다</b>는 것이 지금 우리 알고리즘을 만들 수 없는 이유다.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ── 판정 ── -->
+  <section>
+    <div class="eyebrow">판정</div>
+    <h2>모델에게 무엇을 묻는가</h2>
+    <div class="measure">
+      <p>
+        판정은 프롬프트 한 장이 전부다. 규칙도 점수도 없고, <strong>25초 안에서 본 것</strong>과
+        직전 주기의 전사문 한 덩이가 입력의 전부다.
+      </p>
+    </div>
+
+<pre><b>system</b>  당신은 실시간 세일즈 코치다. 방금 20~30초 대화 조각을 보고 상황을 판정한다.
+         level: "normal" | "caution"(톤 하락·이견·가격저항)
+              | "danger"(격앙·욕설·강한 불만·계약 파기/이탈 위협)
+              | "opportunity"(명확한 구매신호·강한 긍정)
+         반드시 JSON 하나만: {"level","reason","script","action"}
+         <b>애매하면 normal. 과잉 경보 금지.</b> 모든 출력 한국어.
+
+<b>user</b>    [직전 맥락]   ← 지난 주기의 전사문 (있을 때만)
+         [대화 조각]   ← 이번 25초 전사문, 4,000자까지</pre>
+
+    <div class="levels">
+      <div class="lv ok"><h4>🟢 정상</h4><p>화면에 카드만 남고 내용은 비운다. 대부분의 주기가 여기다.</p></div>
+      <div class="lv warn"><h4>🟡 주의</h4><p>톤 하락·이견·가격 저항. 화면의 예시가 이 등급이다.</p></div>
+      <div class="lv bad"><h4>🔴 위험</h4><p>격앙·강한 불만·이탈 위협. <b>연속 2회여야 올라간다.</b></p></div>
+      <div class="lv opp"><h4>🔵 기회</h4><p>명확한 구매 신호. 히스테리시스 없이 즉시 뜬다.</p></div>
+    </div>
+
+    <h3>완충 장치 — 위험만 두 번 물어본다</h3>
+    <div class="measure">
+      <p>
+        모델이 <code>danger</code> 를 주어도 <strong>첫 번째는 주의로 낮춘다.</strong>
+        연속 두 주기가 위험일 때만 빨간 카드가 뜬다. 그 사이에 위험이 아닌 판정이 하나라도 오면
+        누적이 0으로 돌아간다.
+      </p>
+      <p>
+        <strong>대화 중에 뜨는 경보이기 때문이다.</strong> 고객 앞에서 화면이 빨개지면 영업담당의
+        말이 흔들린다. 한 번의 오탐이 그 미팅을 망칠 수 있으니, 위험만은 두 번 확인한다.
+        기회는 반대다 — 놓치면 그만이라 즉시 띄운다.
+      </p>
+    </div>
+
+    <figure>
+      <div class="frame">
+        <svg viewBox="0 0 960 176" role="img"
+             aria-label="모델이 위험으로 판정해도 첫 번째는 주의로 낮추고, 연속 두 번 위험일 때만 위험으로 표시한다. 중간에 위험이 아닌 판정이 오면 누적이 0으로 돌아간다.">
+          <defs>
+            <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+          <text x="8" y="20" font-size="11" font-weight="600" fill="currentColor" opacity=".55" letter-spacing="1">모델이 준 값</text>
+          <text x="8" y="106" font-size="11" font-weight="600" fill="currentColor" opacity=".55" letter-spacing="1">화면에 뜨는 값</text>
+
+          <g font-size="12" font-weight="600" text-anchor="middle">
+            <rect x="120" y="30" width="120" height="34" rx="6" fill="#991B1B" opacity=".14"/>
+            <rect x="120" y="30" width="120" height="34" rx="6" fill="none" stroke="#991B1B" stroke-width="1.3"/>
+            <text x="180" y="52" fill="#991B1B">danger</text>
+
+            <rect x="300" y="30" width="120" height="34" rx="6" fill="#991B1B" opacity=".14"/>
+            <rect x="300" y="30" width="120" height="34" rx="6" fill="none" stroke="#991B1B" stroke-width="1.3"/>
+            <text x="360" y="52" fill="#991B1B">danger</text>
+
+            <rect x="480" y="30" width="120" height="34" rx="6" fill="#166534" opacity=".14"/>
+            <rect x="480" y="30" width="120" height="34" rx="6" fill="none" stroke="#166534" stroke-width="1.3"/>
+            <text x="540" y="52" fill="#166534">normal</text>
+
+            <rect x="660" y="30" width="120" height="34" rx="6" fill="#991B1B" opacity=".14"/>
+            <rect x="660" y="30" width="120" height="34" rx="6" fill="none" stroke="#991B1B" stroke-width="1.3"/>
+            <text x="720" y="52" fill="#991B1B">danger</text>
+
+            <rect x="840" y="30" width="112" height="34" rx="6" fill="#991B1B" opacity=".14"/>
+            <rect x="840" y="30" width="112" height="34" rx="6" fill="none" stroke="#991B1B" stroke-width="1.3"/>
+            <text x="896" y="52" fill="#991B1B">danger</text>
+          </g>
+
+          <g stroke="currentColor" stroke-width="1.3" marker-end="url(#b)">
+            <line x1="180" y1="66" x2="180" y2="110"/>
+            <line x1="360" y1="66" x2="360" y2="110"/>
+            <line x1="540" y1="66" x2="540" y2="110"/>
+            <line x1="720" y1="66" x2="720" y2="110"/>
+            <line x1="896" y1="66" x2="896" y2="110"/>
+          </g>
+
+          <g font-size="12" font-weight="600" text-anchor="middle">
+            <rect x="120" y="118" width="120" height="34" rx="6" fill="#92400E" opacity=".16"/>
+            <rect x="120" y="118" width="120" height="34" rx="6" fill="none" stroke="#92400E" stroke-width="1.3"/>
+            <text x="180" y="140" fill="#92400E">주의</text>
+
+            <rect x="300" y="118" width="120" height="34" rx="6" fill="#991B1B" opacity=".16"/>
+            <rect x="300" y="118" width="120" height="34" rx="6" fill="none" stroke="#991B1B" stroke-width="1.6"/>
+            <text x="360" y="140" fill="#991B1B">위험</text>
+
+            <rect x="480" y="118" width="120" height="34" rx="6" fill="#166534" opacity=".16"/>
+            <rect x="480" y="118" width="120" height="34" rx="6" fill="none" stroke="#166534" stroke-width="1.3"/>
+            <text x="540" y="140" fill="#166534">정상</text>
+
+            <rect x="660" y="118" width="120" height="34" rx="6" fill="#92400E" opacity=".16"/>
+            <rect x="660" y="118" width="120" height="34" rx="6" fill="none" stroke="#92400E" stroke-width="1.3"/>
+            <text x="720" y="140" fill="#92400E">주의</text>
+
+            <rect x="840" y="118" width="112" height="34" rx="6" fill="#991B1B" opacity=".16"/>
+            <rect x="840" y="118" width="112" height="34" rx="6" fill="none" stroke="#991B1B" stroke-width="1.6"/>
+            <text x="896" y="140" fill="#991B1B">위험</text>
+          </g>
+
+          <text x="540" y="172" text-anchor="middle" font-size="10.5" fill="currentColor" opacity=".6">
+            정상 하나가 오면 누적이 0으로 돌아간다 — 그래서 네 번째도 다시 &quot;주의&quot;부터 시작한다
+          </text>
+        </svg>
+      </div>
+      <figcaption>
+        같은 <code>danger</code> 라도 <b>몇 번째인지에 따라 화면이 달라진다.</b>
+        누적은 클라이언트가 세고(<code>dangerStreakRef</code>), 서버는 매 주기를 독립적으로 본다 —
+        <b>서버는 자기가 방금 뭐라고 했는지 모른다.</b>
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ── 비용 ── -->
+  <section>
+    <div class="eyebrow">규모</div>
+    <h2>한 시간이면 288번</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>회의 길이</th><th>주기</th><th>STT 호출</th><th>판정 호출</th><th>합계</th></tr></thead>
+        <tbody>
+          <tr><td>25분</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">120</td></tr>
+          <tr><td>1시간</td><td class="num">144</td><td class="num">144</td><td class="num">144</td><td class="num">288</td></tr>
+          <tr><td>83분 (8/20 실제)</td><td class="num">199</td><td class="num">199</td><td class="num">199</td><td class="num">398</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="measure">
+      <p style="margin-top:16px">
+        8/20 조사 때 이 주기가 <strong>회의가 살아 있다는 심장 박동</strong> 노릇을 했다 —
+        Worker 요청 통계에서 분당 2건이 80분간 끊기지 않다가 11:17에 멈춘 자리가
+        화면이 죽은 자리였다. 코칭이 <strong>의도치 않은 관측 장치</strong>가 된 셈이다.
+      </p>
+      <p>
+        2026-08-24 부터 <strong>기본이 켜짐</strong>이다. 그전에는 꺼져 있어 대부분의 회의에
+        이 호출이 아예 없었다. 즉 <strong>비용도 데이터도 이제부터 실제로 쌓인다.</strong>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── 빈틈 ── -->
+  <section>
+    <div class="eyebrow">지금의 한계</div>
+    <h2>왜 아직 &quot;우리 알고리즘&quot;이 아닌가</h2>
+    <ul class="gaps">
+      <li><span class="t">판정이 어디에도 남지 않는다</span>
+        <span class="d">클립·전사문·결과 전부 응답으로 한 번 나가고 끝이다. <b>맞았는지 틀렸는지 잴 방법이 없고, 재지 못하면 고칠 수도 없다.</b> 이것이 나머지 전부의 선행 조건이다.</span></li>
+      <li><span class="t">화자를 모른다</span>
+        <span class="d"><code>whisper-1</code> 은 화자 분리를 하지 않는다. <b>&quot;상대방의 마음속에 의구심&quot;을 누가 말했는지 모른 채 판정한다</b> — 영업담당의 걱정을 고객의 저항으로 읽을 수 있다.</span></li>
+      <li><span class="t">문맥이 25초 + 직전 한 덩이뿐</span>
+        <span class="d">미팅 제목·사전 메모·고객사 이력·지난 미팅 결과가 프롬프트에 들어가지 않는다. <b>이미 DB에 있는 것들인데 쓰지 않는다.</b></span></li>
+      <li><span class="t">코드로 셀 수 있는 것을 모델에게 묻는다</span>
+        <span class="d">발화 점유율·침묵 길이·말 끊김·속도 변화·질문 비율은 <b>계산하면 되는 값</b>이다. 사후 분석에는 이미 <code>computeTalkMetrics</code> 가 있는데 실시간에는 없다.</span></li>
+      <li><span class="t">모두에게 같은 프롬프트</span>
+        <span class="d">영업담당마다 말투·속도·질문 습관이 다른데 기준이 하나다. 개인 기준선이 없으니 <b>&quot;평소와 다르다&quot;를 알 수 없다.</b></span></li>
+      <li><span class="t">결과와 이어지지 않는다</span>
+        <span class="d">코칭이 실제로 계약에 도움이 됐는지 볼 고리가 없다. <b>성과와 연결되지 않은 코칭은 검증할 수 없다.</b></span></li>
+    </ul>
+  </section>
+
+  <footer>
+    코드 기준 <span style="font-family:'IBM Plex Mono',monospace">v2.15.0</span> ·
+    <span style="font-family:'IBM Plex Mono',monospace">worker/src/services/risk.ts</span> ·
+    <span style="font-family:'IBM Plex Mono',monospace">frontend/web/src/pages/UploadPage.tsx</span><br>
+    개발 계획은 <span style="font-family:'IBM Plex Mono',monospace">docs/2026-08-24-live-coaching-algorithm-plan.md</span> 에 있다.
+  </footer>
+</div>
