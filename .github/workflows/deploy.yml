@@ -157,6 +157,11 @@ jobs:
         run: |
           set -euo pipefail
           cd frontend/web
+          # **Pages 프로젝트가 없으면 먼저 만든다** (첫 배포). production 브랜치를 main 으로.
+          if ! npx wrangler@4 pages project list 2>/dev/null | grep -qw "$PROJECT"; then
+            echo "Pages 프로젝트 $PROJECT 가 없다 — 만든다"
+            npx wrangler@4 pages project create "$PROJECT" --production-branch main
+          fi
           npx wrangler@4 pages deploy dist --project-name "$PROJECT" --branch main
 
       - name: 정말 올라갔는지 확인
