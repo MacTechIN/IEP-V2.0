@@ -1,8 +1,8 @@
-// 미팅 읽기 — 사내 백엔드 services/meetingService.ts 의 조회 부분 이관분 (C-4a)
+// 조사 읽기 — 사내 백엔드 services/meetingService.ts 의 조회 부분 이관분 (C-4a)
 // 쓰기(업로드·분석)는 C-4b·C-5 다.
 //
-// **소유권 검사를 추가했다.** 고객과 같은 구멍이 여기에도 있었고, 이쪽이 더 무겁다 —
-// 미팅에는 녹취 전문과 분석 결과가 들어 있다.
+// **소유권 검사를 추가했다.** 대상자과 같은 구멍이 여기에도 있었고, 이쪽이 더 무겁다 —
+// 조사에는 녹취 전문과 분석 결과가 들어 있다.
 // 원본은 목록만 `user_id` 로 걸러내고 단건 조회·수정·삭제는 ID 만 맞으면 통과시켰다.
 
 import type pg from 'pg'
@@ -61,7 +61,7 @@ export const toMeeting = (r: MeetingRow) => ({
 
 export interface NewMeeting {
   userId: string
-  /** 의뢰인. **없어도 된다** (016) — 내부 회의·거래처 미팅. 값이 있으면 v2.customers 를 참조한다 */
+  /** 대상자. **없어도 된다** (016) — 내부 회의·거래처 조사. 값이 있으면 v2.customers 를 참조한다 */
   customerId: string | null
   title: string
   startTime: string
@@ -70,16 +70,16 @@ export interface NewMeeting {
   notes?: string | null
   /** 분석 방식 (016). 모르는 값이면 general 로 떨어진다 */
   kind?: string | null
-  /** 사건. **없어도 정상이다** — 수임 전 상담·자문 문의·내부 회의 */
+  /** 사건. **없어도 정상이다** — 수임 전 조사·자문 문의·내부 회의 */
   matterId?: string | null
 }
 
 /**
- * 미팅을 만든다.
+ * 조사을 만든다.
  *
  * 사내 원본과 달리 **여기서 분석을 시작하지 않는다.** 원본은 `autoAnalyze !== false` 면
  * 생성 직후 분석을 걸었는데, 화면은 녹음을 붙인 뒤 `POST /meetings/:id/analyze` 로 따로 건다.
- * 둘 다 돌면 같은 미팅을 두 번 분석해 STT 비용이 두 배가 된다.
+ * 둘 다 돌면 같은 조사을 두 번 분석해 STT 비용이 두 배가 된다.
  *
  * `id`·`created_at` 은 넣지 않는다 — 스키마에 기본값이 있다.
  */
@@ -105,11 +105,11 @@ export async function createMeeting(db: pg.Client, m: NewMeeting): Promise<Meeti
 }
 
 /**
- * 미팅 목록.
+ * 조사 목록.
  *
  * **관리자는 전부 본다.** 단건 조회(`getMeeting`)에는 처음부터 관리자 예외가 있었는데
  * 목록에만 없어서, 관리자로 로그인하면 **목록이 비어 있는데 링크로는 열리는** 상태가 됐다.
- * 관리 화면에서 남의 미팅을 열 수 있으면서 목록에는 안 보이는 것은 앞뒤가 맞지 않는다.
+ * 관리 화면에서 남의 조사을 열 수 있으면서 목록에는 안 보이는 것은 앞뒤가 맞지 않는다.
  */
 export async function listMeetings(
   db: pg.Client, userId: string, limit: number, offset: number, isAdmin = false,
@@ -120,7 +120,7 @@ export async function listMeetings(
   const args = isAdmin ? [limit, offset] : [limit, offset, userId]
   const rows = await db.query<MeetingRow>(
     // **`kind`·`matter_id`·`privileged` 를 빠뜨리면 안 된다.** 매퍼가 `kind` 를
-    // `?? 'general'` 로 메우기 때문에, 안 골라 오면 **법률 상담이 목록에서 「일반」으로 보인다** —
+    // `?? 'general'` 로 메우기 때문에, 안 골라 오면 **조사이 목록에서 「일반」으로 보인다** —
     // 값이 비는 것이 아니라 **틀린 값이 나온다.** 2026-08-26 베타 점검에서 실제로 그랬다.
     `select m.id, m.user_id, m.customer_id, m.title, m.start_time, m.end_time,
             m.duration_minutes, m.audio_url, m.notes, m.analysis_status, m.analysis_progress,
@@ -161,13 +161,13 @@ export async function getMeeting(
       where id = $1 and deleted_at is null
         and (
           user_id = $3
-          -- **관리자 우회는 법률 상담에 통하지 않는다** (021).
+          -- **관리자 우회는 조사에 통하지 않는다** (021).
           --
           -- SEP 는 관리자가 전체를 본다. 영업에서는 그게 맞다 — 실적을 보려면 필요하다.
-          -- **법률사무소에서는 그것이 위험이다.** 비닉권이 걸린 상담을 사건 담당자가 아닌
+          -- **법률사무소에서는 그것이 위험이다.** 비닉권이 걸린 조사을 사건 담당자가 아닌
           -- 사람이 열 수 있으면, 그 사실 하나로 통제가 무너졌다고 볼 여지가 생긴다.
           --
-          -- 일반·수임 미팅은 SEP 동작 그대로 둔다. 좁히는 것은 위험한 쪽만이다.
+          -- 일반·수임 조사은 SEP 동작 그대로 둔다. 좁히는 것은 위험한 쪽만이다.
           or ($2::boolean and kind <> 'legal')
         )`,
     [id, isAdmin, userId])
@@ -254,7 +254,7 @@ export async function getSegments(db: pg.Client, meetingId: string) {
 export interface SegmentPatch { content?: string; highlights?: { start: number; end: number }[] }
 
 /**
- * 녹취 한 줄을 고친다. **미팅 소유자만.**
+ * 녹취 한 줄을 고친다. **조사 소유자만.**
  *
  * `content_original` 은 처음 고칠 때만 채운다 — 두 번째 수정에서 덮으면
  * "AI 원문" 이 아니라 "직전 내 수정본" 이 되어 되돌릴 곳이 사라진다.
@@ -325,12 +325,12 @@ export async function updateMeeting(db: pg.Client, id: string, data: Record<stri
 }
 
 /**
- * **분석 결과만 지운다.** 미팅·메모·녹음·녹취는 그대로 둔다.
+ * **분석 결과만 지운다.** 조사·메모·녹음·녹취는 그대로 둔다.
  *
  * 왜 필요한가 (2026-08-20)
- *   녹음이 하나도 붙지 않은 미팅이 제목과 메모만으로 분석돼 `overall 70` 과
+ *   녹음이 하나도 붙지 않은 조사이 제목과 메모만으로 분석돼 `overall 70` 과
  *   `analysis_status = 'completed'` 를 남겼다. 실패로 보이지 않고 **정상 기록처럼 보이는 것**이
- *   문제였다. 그렇다고 미팅을 지우면 사람이 직접 쓴 메모까지 없어진다 —
+ *   문제였다. 그렇다고 조사을 지우면 사람이 직접 쓴 메모까지 없어진다 —
  *   그 메모는 진짜 내용이고 유일본이다.
  *
  *   그래서 지우는 단위를 분석 결과 하나로 좁힌다. 상태는 `pending`(스키마 기본값)으로

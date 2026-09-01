@@ -74,7 +74,7 @@ export const MeetingListPage: React.FC = () => {
   };
 
   const handleDelete = async (meetingId: string) => {
-    if (window.confirm('이 미팅을 삭제하시겠습니까?')) {
+    if (window.confirm('이 조사을 삭제하시겠습니까?')) {
       try {
         await apiClient.deleteMeeting(meetingId);
         await loadMeetings();
@@ -87,9 +87,9 @@ export const MeetingListPage: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">미팅 목록</Typography>
+        <Typography variant="h4">조사 목록</Typography>
         <Button variant="primary" onClick={() => navigate('/upload')}>
-          새 미팅 추가
+          새 조사 추가
         </Button>
       </Box>
 
@@ -97,11 +97,11 @@ export const MeetingListPage: React.FC = () => {
         <Table>
           <TableHead sx={{ backgroundColor: '#F3F4F6' }}>
             <TableRow>
-              <TableCell>미팅명</TableCell>
+              <TableCell>조사명</TableCell>
               {/* **종류가 안 보이면 목록에서 법률 상담을 구분할 수 없다.**
                   2026-08-26 이전에는 목록 API 가 kind 를 안 줘서 전부 「일반」 이었다. */}
               <TableCell>종류</TableCell>
-              <TableCell>의뢰인</TableCell>
+              <TableCell>대상자</TableCell>
               <TableCell>날짜</TableCell>
               <TableCell>상태</TableCell>
               <TableCell>점수</TableCell>
@@ -175,11 +175,11 @@ export const MeetingListPage: React.FC = () => {
       </TableContainer>
 
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>미팅 수정</DialogTitle>
+        <DialogTitle>조사 수정</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           <TextField
             fullWidth
-            label="미팅명"
+            label="조사명"
             value={editData.title}
             onChange={(e) => setEditData({ ...editData, title: e.target.value })}
             sx={{ mb: 2 }}

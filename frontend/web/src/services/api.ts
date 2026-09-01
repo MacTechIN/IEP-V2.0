@@ -171,7 +171,7 @@ class APIClient {
     return response;
   }
 
-  // 미팅 오디오 업로드 (STT + AI 분석 트리거) — 단일 파일 레거시 경로
+  // 조사 오디오 업로드 (STT + AI 분석 트리거) — 단일 파일 레거시 경로
   async uploadAudio(meetingId: string, file: File): Promise<ApiResponse> {
     const form = new FormData();
     form.append('audio', file);
@@ -194,7 +194,7 @@ class APIClient {
       timeout: UPLOAD_TIMEOUT_MS,
     });
   }
-  // 아직 미팅에 붙지 않은 녹음들. 전사 진행 상태를 확인하는 데 쓴다.
+  // 아직 조사에 붙지 않은 녹음들. 전사 진행 상태를 확인하는 데 쓴다.
   async getRecordingDrafts(): Promise<ApiResponse> {
     return this.client.get('/recordings/drafts');
   }
@@ -221,7 +221,7 @@ class APIClient {
     return this.client.post(`/recordings/${recordingId}/audio-ticket`);
   }
 
-  /** 미팅노트와 AI요약만 다시 만든다. 리포트·지표·코칭은 그대로 둔다. */
+  /** 조사노트와 AI요약만 다시 만든다. 리포트·지표·코칭은 그대로 둔다. */
   async renote(meetingId: string): Promise<ApiResponse> {
     return this.client.post(`/analysis/meeting/${meetingId}/renote`, {}, { timeout: 120000 });
   }
@@ -235,7 +235,7 @@ class APIClient {
   async analyzeMeeting(
     meetingId: string, recordingIds: string[], coachingSessionId?: string,
   ): Promise<ApiResponse> {
-    // 코칭 판정은 미팅보다 먼저 쌓이므로 여기서 붙여 준다 (015).
+    // 코칭 판정은 조사보다 먼저 쌓이므로 여기서 붙여 준다 (015).
     return this.client.post(`/meetings/${meetingId}/analyze`, { recordingIds, coachingSessionId });
   }
 
@@ -249,7 +249,7 @@ class APIClient {
    */
   async riskCheck(clip: File, opts: {
     context?: string; sessionId?: string; atMs?: number; dangerStreak?: number;
-    /** 미팅 종류 (016). 서버가 이걸 보고 무엇을 물을지 정한다 — 일반 미팅에 법률 코칭을 걸지 않는다 */
+    /** 조사 종류 (016). 서버가 이걸 보고 무엇을 물을지 정한다 — 일반 조사에 법률 코칭을 걸지 않는다 */
     kind?: 'legal' | 'business' | 'general';
   } = {}): Promise<ApiResponse> {
     const form = new FormData();
@@ -267,14 +267,14 @@ class APIClient {
     return this.client.patch(`/coaching/${eventId}/feedback`, { feedback });
   }
 
-  // ── 사건 (016~022) ──
+  // ── 수사사건 (016~022) ──
   async getMatters(status?: string): Promise<ApiResponse> {
     return this.client.get('/matters', { params: status ? { status } : undefined });
   }
   async getMatter(id: string): Promise<ApiResponse> { return this.client.get(`/matters/${id}`); }
 
-  // 끝난 상담을 사건에 붙이고 뗀다 (030).
-  // **PATCH 가 아니다** — 사건 자료를 다시 만드는 일이라 결과를 돌려받아야 한다.
+  // 끝난 조사를 수사사건에 붙이고 뗀다 (030).
+  // **PATCH 가 아니다** — 수사사건 자료를 다시 만드는 일이라 결과를 돌려받아야 한다.
   async attachMeetingToMatter(meetingId: string, matterId: string): Promise<ApiResponse> {
     return this.client.post(`/meetings/${meetingId}/matter`, { matterId });
   }
@@ -283,7 +283,7 @@ class APIClient {
   }
   async createMatter(data: any): Promise<ApiResponse> { return this.client.post('/matters', data); }
 
-  // 사건 정리 (030). **사본을 먼저 꺼낼 수 있고, 지우면 사본이 함께 돌아온다.**
+  // 수사사건 정리 (030). **사본을 먼저 꺼낼 수 있고, 지우면 사본이 함께 돌아온다.**
   async matterPurgeCandidates(): Promise<ApiResponse> {
     return this.client.get('/matters/purge-candidates');
   }
@@ -304,7 +304,7 @@ class APIClient {
   async addAdverseParty(matterId: string, data: any): Promise<ApiResponse> {
     return this.client.post(`/matters/${matterId}/adverse-parties`, data);
   }
-  /** 요건을 손으로 더한다 (018·025). 템플릿은 뼈대일 뿐 — 사건마다 다투는 자리가 다르다 */
+  /** 요건을 손으로 더한다 (018·025). 템플릿은 뼈대일 뿐 — 수사사건마다 다투는 자리가 다르다 */
   async addElement(matterId: string, data: any): Promise<ApiResponse> {
     return this.client.post(`/matters/${matterId}/elements`, data);
   }
@@ -334,7 +334,7 @@ class APIClient {
     return this.client.get(`/matters/${matterId}/documents/available`,
       { params: meetingId ? { meetingId } : undefined });
   }
-  /** 모델에게 보낼 자료를 먼저 본다 — 변호사가 읽고 보탤 수 있어야 한다 */
+  /** 모델에게 보낼 자료를 먼저 본다 — 수사관이 읽고 보탤 수 있어야 한다 */
   async documentBrief(matterId: string, kind: string, meetingId?: string): Promise<ApiResponse> {
     return this.client.get(`/matters/${matterId}/documents/brief`,
       { params: { kind, ...(meetingId ? { meetingId } : {}) } });
@@ -351,12 +351,12 @@ class APIClient {
     return this.client.patch(`/documents/${id}`, data);
   }
 
-  /** 법률 분해 결과 (018). 상담 단위(원문·findings)와 사건 단위(요건·타임라인·증거)를 함께 준다 */
+  /** 법률 분해 결과 (018). 조사 단위(원문·findings)와 수사사건 단위(요건·타임라인·증거)를 함께 준다 */
   async getLegalAnalysis(meetingId: string): Promise<ApiResponse> {
     return this.client.get(`/legal/meeting/${meetingId}`);
   }
 
-  /** 이 미팅의 코칭 타임라인 */
+  /** 이 조사의 코칭 타임라인 */
   async getCoachingTimeline(meetingId: string): Promise<ApiResponse> {
     return this.client.get(`/coaching/meeting/${meetingId}`);
   }
@@ -368,7 +368,7 @@ class APIClient {
     return res.data as ApiResponse;
   }
 
-  // 미팅 API
+  // 조사 API
   async createMeeting(data: any): Promise<ApiResponse> {
     return this.client.post('/meetings', data);
   }
@@ -430,7 +430,7 @@ class APIClient {
     return this.client.get('/dashboard/insights/me');
   }
 
-  // 고객 API
+  // 대상자 API
   async getCustomers(params?: Record<string, any>): Promise<ApiResponse> {
     return this.client.get('/customers', { params });
   }
@@ -480,8 +480,8 @@ class APIClient {
   async adminDeleteUser(id: string, confirm: string): Promise<ApiResponse> {
     return this.client.delete(`/admin/users/${id}`, { data: { confirm } });
   }
-  /** 인계. **이것이 없으면 삭제도 비활성화도 막다른 길이다** — 사건은 담당자만 본다.
-   *  사건·기한·의뢰인·상담·녹음·메일을 **전부** 옮긴다 (023 의 blockers 와 같은 목록) */
+  /** 인계. **이것이 없으면 삭제도 비활성화도 막다른 길이다** — 수사사건은 담당자만 본다.
+   *  수사사건·기한·대상자·조사·녹음·메일을 **전부** 옮긴다 (023 의 blockers 와 같은 목록) */
   async adminTransferMatters(id: string, toUserId: string): Promise<ApiResponse> {
     return this.client.post(`/admin/users/${id}/transfer`, { toUserId });
   }

@@ -45,7 +45,7 @@ export interface TranscriptDoc {
   meta: { label: string; value: string }[];
   /** 같은 화자의 연속 발화는 한 덩어리다 — 아래 `buildTranscriptDoc` 주석 참고. */
   blocks: { speaker: string; lines: string[] }[];
-  /** 파일 이름에 쓰는 **미팅 날짜**(YYYY-MM-DD). 내려받은 날이 아니다. */
+  /** 파일 이름에 쓰는 **조사 날짜**(YYYY-MM-DD). 내려받은 날이 아니다. */
   dateKey: string;
   /** 비닉권 대상인가 (021). 참이면 모든 형식의 **맨 위에** 고지가 박힌다. */
   privileged?: boolean;
@@ -63,7 +63,7 @@ function formatDateTime(d: Date): string {
     + `${two(d.getHours())}:${two(d.getMinutes())}`;
 }
 
-/** `2026-08-14`. 파일 이름용. 미팅 시각이 없거나 깨졌으면 오늘로 떨어진다. */
+/** `2026-08-14`. 파일 이름용. 조사 시각이 없거나 깨졌으면 오늘로 떨어진다. */
 function dateKeyOf(iso: string | undefined, fallback: Date): string {
   const d = iso ? new Date(iso) : fallback;
   const ok = Number.isNaN(d.getTime()) ? fallback : d;
@@ -74,7 +74,7 @@ function dateKeyOf(iso: string | undefined, fallback: Date): string {
  * 녹취를 문서로 옮긴다.
  *
  * **같은 화자가 연달아 말한 것은 한 덩어리로 묶는다.** 발화 404개를 그대로 펼치면
- * `[영업대표]` 가 404번 반복되는데, 그건 사람이 읽을 수 있는 문서가 아니다.
+ * `[수사관]` 가 404번 반복되는데, 그건 사람이 읽을 수 있는 문서가 아니다.
  *
  * `now` 를 밖에서 넣을 수 있게 둔 것은 테스트 때문이다 — "내려받은 때" 가 매번 달라지면
  * 출력 전체를 문자열로 비교할 수 없다.
@@ -115,7 +115,7 @@ export function buildTranscriptDoc(
   const meta: TranscriptDoc['meta'] = [];
   const when = meeting.startTime ? formatDateTime(new Date(meeting.startTime)) : '';
   if (when) meta.push({ label: '일시', value: when });
-  if (meeting.customerName) meta.push({ label: '의뢰인', value: meeting.customerName });
+  if (meeting.customerName) meta.push({ label: '대상자', value: meeting.customerName });
   meta.push({ label: '발화', value: `${spoken}개 · 화자 ${speakers.size}명` });
   meta.push({ label: '내려받은 때', value: formatDateTime(now) });
   // 작성자 (026). **채워진 것만 이어 붙인다** — 빈 괄호가 찍히면 안 된다.
@@ -129,7 +129,7 @@ export function buildTranscriptDoc(
   }
 
   return {
-    title: (meeting.title || '').trim() || '미팅',
+    title: (meeting.title || '').trim() || '조사',
     subtitle: '화자별 대화',
     meta,
     blocks,
@@ -383,7 +383,7 @@ const TITLE_MAX = 120;
 /**
  * `위바이K 해외구매대행플렛폼 개발 기획논의_화자별대화_2026-08-14.txt`
  *
- * 날짜는 **미팅 날짜**다 — 같은 미팅을 두 번 받아도 같은 이름이어야 한다.
+ * 날짜는 **조사 날짜**다 — 같은 조사을 두 번 받아도 같은 이름이어야 한다.
  */
 export function safeFileName(title: string, dateKey: string, ext: string): string {
   let base = (title || '')
@@ -391,7 +391,7 @@ export function safeFileName(title: string, dateKey: string, ext: string): strin
     .replace(/\s+/g, ' ')
     .replace(/^[.\s]+|[.\s]+$/g, '');
   if (base.length > TITLE_MAX) base = base.slice(0, TITLE_MAX).trim();
-  if (!base) base = '미팅';
+  if (!base) base = '조사';
   return `${base}_화자별대화_${dateKey}.${ext}`;
 }
 

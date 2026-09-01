@@ -44,10 +44,10 @@ const RISK_UI: Record<string, { label: string; bg: string; border: string; emoji
 type RecState = 'idle' | 'recording' | 'paused';
 
 /**
- * 미팅 종류 — **분석 방식을 정한다** (마이그레이션 016).
+ * 조사 종류 — **분석 방식을 정한다** (마이그레이션 016).
  *
- * 모든 미팅이 사건 상담은 아니다. 변호사도 수임 전 상담·자문 문의·내부 회의·거래처 미팅을 한다.
- * **일반 미팅에 법률 분석을 걸면 요건사실이 전부 `MISSING` 으로 나온다** —
+ * 모든 조사가 수사사건 조사는 아니다. 수사관도 수임 전 조사·자문 문의·내부 회의·거래처 조사를 한다.
+ * **일반 조사에 법률 분석을 걸면 요건사실이 전부 `MISSING` 으로 나온다** —
  * 아무 문제 없는 대화에 대고 "빠진 것 투성이" 라고 외치는 셈이고, 그러면 다음부터 아무도 안 본다.
  *
  * **녹음을 누르기 전에 정해져야 한다.** 실시간 코칭이 종류에 따라 다른 것을 말하기 때문이다.
@@ -101,7 +101,7 @@ export default function UploadPage() {
 
   /**
    * 마지막에 고른 종류를 기억한다. **다만 `legal` 은 기억하지 않는다** —
-   * 법률 상담을 한 번 하고 나면 그다음 일반 미팅까지 법률로 분석되는 것이
+   * 법률 상담을 한 번 하고 나면 그다음 일반 조사까지 법률로 분석되는 것이
    * 그 반대보다 나쁘다. 위험한 쪽은 매번 고르게 한다.
    */
   const [meetingKind, setMeetingKind] = useState<MeetingKind>(() => {
@@ -121,13 +121,13 @@ export default function UploadPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerOptions, setCustomerOptions] = useState<{ id: string; companyName: string }[]>([]);
   const [when, setWhen] = useState(nowLocal());
-  // 이 미팅이 어느 사건의 것인가 (016). **비워 둘 수 있다** —
-  // 미팅이 늘 사건이 되지는 않는다. 첫 상담은 사건이 없는 채로 시작한다.
+  // 이 조사가 어느 수사사건의 것인가 (016). **비워 둘 수 있다** —
+  // 조사가 늘 수사사건이 되지는 않는다. 첫 조사는 수사사건이 없는 채로 시작한다.
   const [matterId, setMatterId] = useState('');
   const [matters, setMatters] = useState<{ id: string; title: string; fileNo?: string | null }[]>([]);
   const [notes, setNotes] = useState('');
 
-  // 사건 화면에서 「새 상담」 으로 넘어오면 그 사건이 이미 골라져 있다.
+  // 수사사건 화면에서 「새 조사」 으로 넘어오면 그 수사사건이 이미 골라져 있다.
   const [sp] = useSearchParams();
   useEffect(() => {
     (async () => {
@@ -139,7 +139,7 @@ export default function UploadPage() {
           const want = sp.get('matter');
           if (want && rows.some((m: any) => m.id === want)) setMatterId(want);
         }
-      } catch { /* 사건이 없어도 녹음은 되어야 한다 */ }
+      } catch { /* 수사사건이 없어도 녹음은 되어야 한다 */ }
     })();
   }, [sp]);
 
@@ -394,7 +394,7 @@ export default function UploadPage() {
         const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
         try {
           const res = await apiClient.riskCheck(new File([blob], 'clip.webm', { type: blob.type }), {
-            // 종류에 따라 서버가 다른 것을 묻는다 — 일반 미팅에 법률 코칭을 걸지 않는다.
+            // 종류에 따라 서버가 다른 것을 묻는다 — 일반 조사에 법률 코칭을 걸지 않는다.
             kind: meetingKindRef.current,
             context: lastRiskTextRef.current,
             sessionId: sessionIdRef.current,
@@ -812,11 +812,11 @@ export default function UploadPage() {
         notes: notes.trim() || undefined, autoAnalyze: false,
         // 분석이 무엇을 할지 정하는 값이다 (016).
         kind: meetingKind,
-        // 붙여 두면 요건·시계열·증거가 이 사건에 쌓인다 (018). 비면 상담 단위로만 남는다.
+        // 붙여 두면 요건·시계열·증거가 이 수사사건에 쌓인다 (018). 비면 조사 단위로만 남는다.
         matterId: matterId || undefined,
       });
       const meetingId = meetingRes.data.id;
-      // 녹음 중에 쌓인 코칭 판정을 이 미팅에 붙인다 (015).
+      // 녹음 중에 쌓인 코칭 판정을 이 조사에 붙인다 (015).
       await apiClient.analyzeMeeting(meetingId, selectedIds, sessionIdRef.current);
       await pollAnalysis(meetingId);
     } catch (err: any) {
@@ -831,11 +831,11 @@ export default function UploadPage() {
   const anyUploading = recs.some((r) => r.uploading);
   const selectedCount = recs.filter((r) => r.selected).length;
   const canSubmit = !busy && !recordingActive && !anyUploading && !preparing && !!title.trim() && !!customerName.trim();
-  const phaseText = phase === 'creating' ? '미팅 생성 중…' : phase === 'analyzing' ? `분석 중… ${progress}%` : '';
+  const phaseText = phase === 'creating' ? '조사 생성 중…' : phase === 'analyzing' ? `분석 중… ${progress}%` : '';
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Typography variant="h5" fontWeight={700} gutterBottom>새 미팅</Typography>
+      <Typography variant="h5" fontWeight={700} gutterBottom>새 조사</Typography>
       <Typography variant="body2" color="text.secondary" mb={3}>
         녹음을 여러 번 추가할 수 있고, 분석에 사용할 녹음을 선택합니다. 녹음하면서 아래 정보도 입력하세요.
       </Typography>
@@ -871,7 +871,7 @@ export default function UploadPage() {
       )}
 
       {/*
-        서버에는 있는데 미팅에 안 붙은 녹음(draft)은 여기서 보여 주지 않는다 (2.18.0) —
+        서버에는 있는데 조사에 안 붙은 녹음(draft)은 여기서 보여 주지 않는다 (2.18.0) —
         사용자 화면에는 소음이라 관리자 화면(/admin/recordings)으로 옮겼다.
         아래 복구 배너(IndexedDB)는 다른 것이다: 저쪽은 **서버에 못 올라간 것**이다.
       */}
@@ -920,7 +920,7 @@ export default function UploadPage() {
       {/* 1) 녹음 — 최상단 */}
       <Card sx={{ mb: 3, border: '2px solid', borderColor: recState === 'recording' ? 'error.main' : 'primary.light' }}>
         <CardContent sx={{ py: 3 }}>
-          <Typography variant="subtitle1" fontWeight={700} textAlign="center" mb={2}>🎙️ 미팅 녹음</Typography>
+          <Typography variant="subtitle1" fontWeight={700} textAlign="center" mb={2}>🎙️ 조사 녹음</Typography>
 
           {/*
             **녹음을 누르기 전에 종류가 정해져야 한다** — 실시간 코칭이 종류에 따라
@@ -929,7 +929,7 @@ export default function UploadPage() {
           */}
           <Box sx={{ mb: 2.5 }}>
             <Typography variant="caption" color="text.secondary" display="block" mb={0.75}>
-              이 미팅은 어떤 자리입니까
+              이 조사은 어떤 자리입니까
             </Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {MEETING_KINDS.map((k) => (
@@ -1020,7 +1020,7 @@ export default function UploadPage() {
                     </Typography>
                   </Alert>
                 ) : null}
-                {/* 녹음 도중에도 끌 수 있다 — 길어지는 미팅에서 중간에 그만두고 싶을 때가 있다 */}
+                {/* 녹음 도중에도 끌 수 있다 — 길어지는 조사에서 중간에 그만두고 싶을 때가 있다 */}
                 <Stack alignItems="flex-start">
                   <FormControlLabel
                     control={<Switch size="small" checked={liveCoaching}
@@ -1056,8 +1056,8 @@ export default function UploadPage() {
             ── 녹음 버튼 **바로 아래** ── (2026-08-26 배치 변경)
 
             전에는 이 둘이 녹음 카드 **밖**, 녹음 목록 다음에 있었다.
-            녹음 목록은 **10분마다 한 줄씩 늘어난다** — 한 시간짜리 상담이면 여섯 줄이다.
-            그만큼 코칭과 자막이 아래로 밀려 **정작 상담 중에 화면 밖으로 나갔다.**
+            녹음 목록은 **10분마다 한 줄씩 늘어난다** — 한 시간짜리 조사이면 여섯 줄이다.
+            그만큼 코칭과 자막이 아래로 밀려 **정작 조사 중에 화면 밖으로 나갔다.**
 
             버튼 바로 아래로 올리면 목록이 아무리 길어져도 이 둘의 자리는 그대로다.
             순서는 **코칭 → 자막**: 코칭은 몇 줄로 끝나고, 자막은 계속 흐르므로 아래가 맞다.
@@ -1145,8 +1145,8 @@ export default function UploadPage() {
                 </Stack>
                 {/*
                   **자기 안에서만 스크롤한다.** 자막은 말하는 동안 끝없이 늘어나므로,
-                  높이를 묶어 두지 않으면 아래 있는 미팅 정보·제출 버튼이 화면 밖으로 밀린다 —
-                  상담 중에 「업로드 및 분석 시작」 을 찾으러 한참 스크롤해야 한다.
+                  높이를 묶어 두지 않으면 아래 있는 조사 정보·제출 버튼이 화면 밖으로 밀린다 —
+                  조사 중에 「업로드 및 분석 시작」 을 찾으러 한참 스크롤해야 한다.
 
                   폰에서는 더 낮게 잡는다. 화면이 짧아 180px 도 화면의 3분의 1을 먹는다.
                   `dvh` 를 쓰는 이유는 **주소창이 접혔다 펴져도** 비율이 유지되게 하려는 것이다.
@@ -1257,28 +1257,28 @@ export default function UploadPage() {
         </CardContent>
       </Card>
 
-      {/* 2) 미팅 정보 */}
+      {/* 2) 조사 정보 */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="subtitle2" fontWeight={700} mb={2}>미팅 정보</Typography>
+          <Typography variant="subtitle2" fontWeight={700} mb={2}>조사 정보</Typography>
           <Stack spacing={2.5}>
-            <TextField label="미팅 제목" required fullWidth value={title}
+            <TextField label="조사 제목" required fullWidth value={title}
               onChange={(e) => setTitle(e.target.value)} disabled={busy} placeholder="예: 삼성 클라우드 도입 협의" />
             <Autocomplete freeSolo options={customerOptions.map((c) => c.companyName)}
               inputValue={customerName} onInputChange={(_, v) => setCustomerName(v)} disabled={busy}
-              renderInput={(params) => <TextField {...params} label="의뢰인" required placeholder="이름 또는 회사명 (기존 의뢰인 자동완성)" />} />
-            <TextField label="미팅 일시" type="datetime-local" fullWidth value={when}
+              renderInput={(params) => <TextField {...params} label="대상자" required placeholder="이름 또는 회사명 (기존 대상자 자동완성)" />} />
+            <TextField label="조사 일시" type="datetime-local" fullWidth value={when}
               onChange={(e) => setWhen(e.target.value)} disabled={busy} InputLabelProps={{ shrink: true }} />
             {/*
-              **사건에 붙이면 요건·시계열·증거가 그 사건에 쌓인다** (018).
-              비워 두어도 된다 — 첫 상담은 아직 사건이 아니다.
+              **수사사건에 붙이면 요건·시계열·증거가 그 수사사건에 쌓인다** (018).
+              비워 두어도 된다 — 첫 조사는 아직 수사사건이 아니다.
             */}
-            <TextField select label="사건 (선택)" fullWidth value={matterId}
+            <TextField select label="수사사건 (선택)" fullWidth value={matterId}
               onChange={(e) => setMatterId(e.target.value)} disabled={busy}
               helperText={matterId
-                ? '요건·시계열·증거가 이 사건에 쌓입니다'
-                : '비워 두면 이 상담 안에만 남습니다'}>
-              <MenuItem value="">사건 없음</MenuItem>
+                ? '요건·시계열·증거가 이 수사사건에 쌓입니다'
+                : '비워 두면 이 조사 안에만 남습니다'}>
+              <MenuItem value="">수사사건 없음</MenuItem>
               {matters.map((m) => (
                 <MenuItem key={m.id} value={m.id}>
                   {m.title}{m.fileNo ? ` (#${m.fileNo})` : ''}
@@ -1287,7 +1287,7 @@ export default function UploadPage() {
             </TextField>
             <TextField label="사전 메모 (선택)" fullWidth multiline minRows={2} value={notes}
               onChange={(e) => setNotes(e.target.value)} disabled={busy}
-              placeholder="미팅 배경/목표 등 — 분석 리포트에 반영됩니다" />
+              placeholder="조사 배경/목표 등 — 분석 리포트에 반영됩니다" />
           </Stack>
         </CardContent>
       </Card>
@@ -1323,7 +1323,7 @@ export default function UploadPage() {
           {recordingActive ? '녹음을 완료(■)한 뒤 진행하세요.'
             : preparing ? '긴 오디오를 변환·분할하는 중입니다. 길이에 따라 1분 이상 걸릴 수 있습니다.'
             : anyUploading ? '녹음을 올리는 중입니다. 끝나면 활성화됩니다.'
-            : '미팅 제목과 의뢰인을 입력하면 활성화됩니다.'}
+            : '조사 제목과 대상자를 입력하면 활성화됩니다.'}
         </Typography>
       )}
 
@@ -1337,7 +1337,7 @@ export default function UploadPage() {
         읽는 사람이 "무엇이 남는가" 를 알 수 없었다 — 동의에서 가장 알아야 할 것이 그것이다.
 
         위탁처를 이름으로 적는다. "전사 서비스" 라고만 하면 데이터가 어디로 나가는지
-        고객이 판단할 수가 없다.
+        대상자가 판단할 수가 없다.
 
         **한 가지는 앞서 적는다** — 코칭 전사문 보관은 마이그레이션 015 가 들어가야 실제로 시작된다.
         그런데 동의를 먼저 받아 두는 것이 순서상 맞다. 실제보다 **더 알리는 쪽**은 안전하고
@@ -1348,7 +1348,7 @@ export default function UploadPage() {
         <DialogContent>
           <DialogContentText component="div">
             <Typography variant="body2" mb={2}>
-              이 미팅은 녹음되고 AI가 분석합니다. 아래 내용을 참석자에게 알리고 동의를 받아야 합니다.
+              이 조사은 녹음되고 AI가 분석합니다. 아래 내용을 참석자에게 알리고 동의를 받아야 합니다.
             </Typography>
 
             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -1393,7 +1393,7 @@ export default function UploadPage() {
             </Box>
 
             <Typography variant="body2" sx={{ mt: 2, fontWeight: 600, color: 'text.primary' }}>
-              참석자(고객)에게 위 내용을 알리고 동의를 받으셨나요?
+              참석자(대상자)에게 위 내용을 알리고 동의를 받으셨나요?
             </Typography>
           </DialogContentText>
         </DialogContent>

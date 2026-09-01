@@ -66,12 +66,12 @@ export default function MeetingDetailPage() {
   // 녹취는 참고 자료다 — 기본은 접어 둔다
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [transcriptQuery, setTranscriptQuery] = useState('');
-  // 미팅노트가 첫 탭이다 — 나중에 미팅을 되짚을 때 가장 먼저 보는 것이 정리된 노트이고,
+  // 조사노트가 첫 탭이다 — 나중에 조사을 되짚을 때 가장 먼저 보는 것이 정리된 노트이고,
   // 녹취는 그 근거를 확인할 때 옆에서 본다. 그래서 둘을 한 탭에 나란히 둔다.
   const [tab, setTab] = useState<'note' | 'report' | 'metrics' | 'legal'>('note');
   /**
    * 법률 분해 (018). **`kind === 'legal'` 일 때만 부른다** —
-   * 일반 미팅에서 빈 탭을 띄우면 "왜 비어 있지" 를 매번 묻게 된다.
+   * 일반 조사에서 빈 탭을 띄우면 "왜 비어 있지" 를 매번 묻게 된다.
    */
   const [legal, setLegal] = useState<any | null>(null);
   const [doneSet, setDoneSet] = useState<Set<number>>(new Set());
@@ -84,7 +84,7 @@ export default function MeetingDetailPage() {
   const [renoteError, setRenoteError] = useState('');
   const [editCursor, setEditCursor] = useState(0);
   /**
-   * 녹취를 스크롤하면 미팅노트가 그 대목으로 따라간다 (2차-d).
+   * 녹취를 스크롤하면 조사노트가 그 대목으로 따라간다 (2차-d).
    *
    * **보조 기능이다.** 노트를 직접 스크롤하는 중에는 따라오지 않는다 —
    * 읽던 자리를 빼앗기는 것이 안 따라오는 것보다 나쁘다.
@@ -105,7 +105,7 @@ export default function MeetingDetailPage() {
    * 2026-08-11 "95%에서 멈춤" 이 그것이다 — 서버는 이미 100%로 끝나 있었다.
    * 새로고침해야만 결과가 보였고, 사용자는 그걸 알 방법이 없었다.
    */
-  // 사건에 붙이거나 떼면 상담을 다시 읽는다 (030) — matter_id 가 바뀌면
+  // 수사사건에 붙이거나 떼면 조사를 다시 읽는다 (030) — matter_id 가 바뀌면
   // 서면 칸이 통째로 달라지는데, 그때 새로고침을 시키면 사용자는 붙은 줄 모른다.
   const [reload, setReload] = useState(0);
 
@@ -128,7 +128,7 @@ export default function MeetingDetailPage() {
             apiClient.getAnalysis(id).catch(() => null),
             apiClient.getTranscript(id).catch(() => null),
             apiClient.getMeetingRecordings(id).catch(() => null),
-            // 법률 상담일 때만 부른다 — 일반 미팅에는 담긴 것이 없다.
+            // 법률 상담일 때만 부른다 — 일반 조사에는 담긴 것이 없다.
             m.kind === 'legal' ? apiClient.getLegalAnalysis(id).catch(() => null) : Promise.resolve(null),
           ]);
           if (legalResponse?.success) setLegal(legalResponse.data);
@@ -213,7 +213,7 @@ export default function MeetingDetailPage() {
     ? bySpeaker.filter((s: any) =>
         (s.content || '').toLowerCase().includes(q) || (s.speakerLabel || '').toLowerCase().includes(q))
     : bySpeaker;
-  // 실측: 40분 미팅 404개 중 10자 이하가 139개(34%)였고 전부 "뭐", "어!", "괜찮아" 같은 맞장구다.
+  // 실측: 40분 조사 404개 중 10자 이하가 139개(34%)였고 전부 "뭐", "어!", "괜찮아" 같은 맞장구다.
   // 숨겨도 잃는 내용이 없고, 남는 265개는 실제로 읽을 만한 것들이다. 지우지 않고 접기만 한다.
   // 고친 줄의 순서 목록. 번호(①②③)와 "다음 수정 지점으로" 이동에 쓴다.
   const editedIds = segments.filter((s: any) => s.editedAt).map((s: any) => s.id);
@@ -230,7 +230,7 @@ export default function MeetingDetailPage() {
   const saveSegment = async (segId: string, content: string) => {
     if (!id) return;
     applySegments(await apiClient.editSegment(id, segId, { content }));
-    // 낡음 배너를 즉시 띄우기 위해 미팅 쪽 시각도 새로 읽는다
+    // 낡음 배너를 즉시 띄우기 위해 조사 쪽 시각도 새로 읽는다
     const m = await apiClient.getMeetingById(id).catch(() => null);
     if (m?.success && m.data) setMeeting(m.data as Meeting);
   };
@@ -246,7 +246,7 @@ export default function MeetingDetailPage() {
   };
 
   /**
-   * 미팅노트와 AI요약만 다시 만든다.
+   * 조사노트와 AI요약만 다시 만든다.
    * **버튼을 눌러야 돈다** — 한 줄 고칠 때마다 자동으로 돌면 열 줄 고칠 때 열 번 부른다.
    */
   const runRenote = async () => {
@@ -279,7 +279,7 @@ export default function MeetingDetailPage() {
   };
 
   /**
-   * 지금 녹취의 어느 지점을 보고 있는지 → 미팅노트의 어느 주제인지.
+   * 지금 녹취의 어느 지점을 보고 있는지 → 조사노트의 어느 주제인지.
    *
    * **스크롤 비율이 아니라 '맨 위에 보이는 발화의 순번' 을 쓴다.**
    * 화자 필터나 검색으로 목록이 걸러지면 스크롤 비율은 전체 녹취의 위치와 무관해진다.
@@ -370,7 +370,7 @@ export default function MeetingDetailPage() {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/meetings')}>
           돌아가기
         </Button>
-        <Typography sx={{ mt: 2 }}>미팅을 찾을 수 없습니다.</Typography>
+        <Typography sx={{ mt: 2 }}>조사을 찾을 수 없습니다.</Typography>
       </Container>
     );
   }
@@ -399,7 +399,7 @@ export default function MeetingDetailPage() {
         </Paper>
       )}
 
-      {/* 미팅 정보 */}
+      {/* 조사 정보 */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
           <Box>
@@ -449,7 +449,7 @@ export default function MeetingDetailPage() {
         **분석이 덜 된 것을 「완료」로 넘기지 않는다** (028).
 
         2026-08-26 실측: 녹음이 안 붙은 법률 상담이 `completed 100%` 인데 사실관계가
-        전부 비어 있었다. 그대로 두면 변호사는 **「상담에서 건질 것이 없었다」로 읽는다.**
+        전부 비어 있었다. 그대로 두면 수사관은 **「조사에서 건질 것이 없었다」로 읽는다.**
         탭을 열기 **전에** 보여야 하므로 탭 바로 위에 둔다.
       */}
       {meeting.analysisNote && (
@@ -461,24 +461,24 @@ export default function MeetingDetailPage() {
         </Alert>
       )}
 
-      {/* 미팅노트 / 리포트 / 지표.
+      {/* 조사노트 / 리포트 / 지표.
           한 페이지에 전부 쌓으면 정작 읽어야 할 요약·코칭이 저 아래로 밀린다.
-          녹취는 별도 탭이 아니라 미팅노트 옆에 둔다 — 노트를 읽다 근거를 확인하는 흐름이라
+          녹취는 별도 탭이 아니라 조사노트 옆에 둔다 — 노트를 읽다 근거를 확인하는 흐름이라
           탭을 오가면 읽던 자리를 잃는다. */}
       <Tabs
         value={tab}
         onChange={(_, v) => { setTab(v); if (v === 'note') setTranscriptOpen(true); }}
         sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
       >
-        <Tab label={`미팅노트 (${segments.length})`} value="note" />
-        {/* **법률 상담일 때만 보인다.** 일반 미팅에 빈 탭을 띄우지 않는다 (016) */}
+        <Tab label={`조사노트 (${segments.length})`} value="note" />
+        {/* **법률 상담일 때만 보인다.** 일반 조사에 빈 탭을 띄우지 않는다 (016) */}
         {meeting.kind === 'legal' && (
           <Tab label={`사실관계${legal?.findings?.length ? ` · 확인 ${legal.findings.length}` : ''}`} value="legal" />
         )}
         <Tab label="리포트" value="report" />
         {/* **법률 상담에는 지표 탭을 띄우지 않는다.**
-            딜 강도·미팅 점수·스코어카드는 전부 영업 척도다. 법률 상담에 붙이면
-            변호사가 자기 상담을 「딜」로 채점당한다 — 이 제품이 하려는 일이 아니다. */}
+            딜 강도·조사 점수·스코어카드는 전부 영업 척도다. 법률 상담에 붙이면
+            수사관이 자기 조사를 「딜」로 채점당한다 — 이 제품이 하려는 일이 아니다. */}
         {meeting.kind !== 'legal' && <Tab label="지표" value="metrics" />}
       </Tabs>
 
@@ -637,8 +637,8 @@ export default function MeetingDetailPage() {
         </Stack>
       )}
 
-      {/* ── 미팅노트 탭 ── 왼쪽 녹취, 오른쪽 미팅노트.
-          **마크업은 미팅노트가 먼저다.** 모바일에서 위로 와야 하기 때문이다 —
+      {/* ── 조사노트 탭 ── 왼쪽 녹취, 오른쪽 조사노트.
+          **마크업은 조사노트가 먼저다.** 모바일에서 위로 와야 하기 때문이다 —
           정리된 노트를 먼저 보고, 근거가 필요할 때 아래 녹취를 본다.
           데스크톱에서만 row-reverse 로 좌우를 뒤집는다(녹취가 왼쪽). */}
       {tab === 'note' && (
@@ -648,7 +648,7 @@ export default function MeetingDetailPage() {
             flexDirection: { xs: 'column', md: 'row-reverse' },
           }}
         >
-          {/* 오른쪽(모바일에서는 위) — 미팅노트 */}
+          {/* 오른쪽(모바일에서는 위) — 조사노트 */}
           <Box
             ref={noteBoxRef}
             // 사용자가 노트를 직접 스크롤하면 2.5초간 자동 이동을 멈춘다.
@@ -677,7 +677,7 @@ export default function MeetingDetailPage() {
                   size="small" variant="contained" disabled={renoting}
                   onClick={runRenote}
                 >
-                  {renoting ? '갱신 중…' : '미팅노트·AI요약 갱신'}
+                  {renoting ? '갱신 중…' : '조사노트·AI요약 갱신'}
                 </Button>
               </Paper>
             )}
@@ -689,11 +689,11 @@ export default function MeetingDetailPage() {
             {renoting && <LinearProgress sx={{ mb: 2 }} />}
             {analysis && (
               <>
-                {/* 리뷰용 미팅 노트 — 나중에 이것만 보고 미팅을 되짚을 수 있어야 한다.
+                {/* 리뷰용 조사 노트 — 나중에 이것만 보고 조사을 되짚을 수 있어야 한다.
                     녹취 404개를 다시 읽지 않으려면 주제별로 찾아갈 수 있어야 한다. */}
                 {analysis.meetingNote && (analysis.meetingNote.topics?.length || analysis.meetingNote.headline) && (
                   <Paper sx={{ p: 3, mb: 3 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>🗒️ 미팅 노트</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5 }}>🗒️ 조사 노트</Typography>
 
                     {analysis.meetingNote.headline && (
                       <Typography variant="body1" sx={{ fontWeight: 600, mb: 2.5 }}>
@@ -702,7 +702,7 @@ export default function MeetingDetailPage() {
                     )}
 
                     {/* 핵심 키워드 — **맨 아래에 있던 것을 위로 올렸다.**
-                        미팅을 되짚을 때 가장 먼저 찾는 것이 사람·회사·금액·일정이고,
+                        조사을 되짚을 때 가장 먼저 찾는 것이 사람·회사·금액·일정이고,
                         주제 여섯 개를 지나야 나오면 그 역할을 못 한다.
                         누르면 녹취에서 그 말을 찾아 준다 — 이미 있는 검색을 재사용한다. */}
                     {analysis.meetingNote.mentions && analysis.meetingNote.mentions.length > 0 && (
@@ -833,7 +833,7 @@ export default function MeetingDetailPage() {
                       onChange={(e) => setTranscriptQuery(e.target.value)}
                       sx={{ mb: 1.5 }}
                     />
-                    {/* 화자 필터 — 변호사 말만, 또는 의뢰인 말만 보고 싶을 때가 있다 */}
+                    {/* 화자 필터 — 수사관 말만, 또는 대상자 말만 보고 싶을 때가 있다 */}
                     <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
                       <Chip
                         size="small" label={`전체 ${segments.length}`}
@@ -938,7 +938,7 @@ export default function MeetingDetailPage() {
             <Grid container spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} md={6}>
                 <Paper sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>👍 고객 관심사</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>👍 대상자 관심사</Typography>
                   <Stack spacing={1}>
                     {(analysis.interests || []).map((it, i) => (
                       <Box key={i} sx={{ display: 'flex', gap: 1 }}>
@@ -954,7 +954,7 @@ export default function MeetingDetailPage() {
               </Grid>
               <Grid item xs={12} md={6}>
                 <Paper sx={{ p: 3, height: '100%' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>⚠️ 고객 우려사항</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>⚠️ 대상자 우려사항</Typography>
                   <Stack spacing={1}>
                     {(analysis.concerns || []).map((c, i) => (
                       <Box key={i} sx={{ display: 'flex', gap: 1 }}>
@@ -979,7 +979,7 @@ export default function MeetingDetailPage() {
               )}
               <Grid container spacing={2}>
                 {[
-                  { title: '다음 미팅 준비', items: analysis.coaching.preparation },
+                  { title: '다음 조사 준비', items: analysis.coaching.preparation },
                   { title: '체크리스트', items: analysis.coaching.checklist },
                 ].filter((g) => g.items && g.items.length > 0).map((g) => (
                   <Grid item xs={12} sm={6} key={g.title}>
@@ -1012,10 +1012,10 @@ export default function MeetingDetailPage() {
               <Grid container spacing={2}>
                 {[
                   // 법률 상담에서는 「고객」·「영업자」가 아니다
-                  { k: legalKind ? '의뢰인 상태' : '고객 상태', v: analysis.psychInsights.customer_state },
-                  { k: legalKind ? '변호사 자신감' : '영업자 자신감', v: analysis.psychInsights.rep_confidence },
+                  { k: legalKind ? '대상자 상태' : '대상자 상태', v: analysis.psychInsights.customer_state },
+                  { k: legalKind ? '수사관 자신감' : '수사관 자신감', v: analysis.psychInsights.rep_confidence },
                   { k: '답변 품질', v: analysis.psychInsights.answer_quality },
-                  { k: legalKind ? '의뢰인 반응성' : '고객 반응성', v: analysis.psychInsights.responsiveness },
+                  { k: legalKind ? '대상자 반응성' : '대상자 반응성', v: analysis.psychInsights.responsiveness },
                 ].filter((x) => x.v).map((x) => (
                   <Grid item xs={12} sm={6} key={x.k}>
                     <Card variant="outlined">
@@ -1069,14 +1069,14 @@ export default function MeetingDetailPage() {
             </Paper>
           )}
 
-            {/* 고객 니즈 — **영업 분석기의 결과다.**
+            {/* 대상자 니즈 — **영업 분석기의 결과다.**
                 법률 상담에서는 그것을 아예 만들지 않으므로(2.16.0) 칸도 띄우지 않는다.
                 빈 상자를 「분석했는데 아무것도 없었다」 로 읽으면 안 된다.
                 일반·수임 상담이라도 값이 비면 감춘다 — 제목만 있는 상자는 신뢰를 깎는다. */}
             {!legalKind && analysis.customerNeeds?.primary && (
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              📋 고객 니즈 분석
+              📋 대상자 니즈 분석
             </Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -1207,7 +1207,7 @@ export default function MeetingDetailPage() {
           {/* 점수 */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              ⭐ 미팅 점수
+              ⭐ 조사 점수
             </Typography>
             <Grid container spacing={2}>
               {Object.entries(analysis.scores)
@@ -1218,7 +1218,7 @@ export default function MeetingDetailPage() {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                           {key === 'customerUnderstanding'
-                            ? '고객 이해도'
+                            ? '대상자 이해도'
                             : key === 'problemSolving'
                               ? '문제 해결력'
                               : key === 'proposalPersuasion'
@@ -1263,7 +1263,7 @@ export default function MeetingDetailPage() {
             /**
              * **말수 순으로 세우고, 자잘한 것은 접는다** (2026-08-27).
              *
-             * 예전에는 나온 화자를 전부 카드로 그렸다. 실제로 두 명인 미팅에
+             * 예전에는 나온 화자를 전부 카드로 그렸다. 실제로 두 명인 조사에
              * 45장이 떴고, 그 중 절반이 1~5단어짜리였다 — 구간을 넘어 같은 사람을
              * 잇지 못하면 화자가 그만큼 갈라지기 때문이다.
              * **카드 45장은 지표가 아니라 소음이다.**
@@ -1450,12 +1450,12 @@ export default function MeetingDetailPage() {
       )}
 
       {/*
-        아직 한 번도 돌리지 않은 미팅. **진행바를 보여 주면 안 된다** — 기다리면 끝날 것처럼
+        아직 한 번도 돌리지 않은 조사. **진행바를 보여 주면 안 된다** — 기다리면 끝날 것처럼
         보이지만 아무것도 돌고 있지 않다. 무엇을 하면 되는지만 적는다.
       */}
       {meeting.analysisStatus === 'pending' && !meeting.analysisStartedAt && (
         <Paper sx={{ p: 3, bgcolor: '#F1F5F9', border: '1px solid #CBD5E1' }}>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>아직 분석하지 않은 미팅입니다</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>아직 분석하지 않은 조사입니다</Typography>
           <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
             제목과 메모는 그대로 남아 있습니다. 녹음을 붙여 분석하면 요약과 점수가 여기에 들어갑니다.
           </Typography>

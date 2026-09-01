@@ -6,7 +6,7 @@ import { queryOne } from '../lib/db'
 export interface UserRow {
   id: string; email: string; name: string | null; role: string
   department: string | null; monthly_target_krw: number | null
-  // 변호사 프로필 (026). 전부 nullable — **사무장은 bar_no 가 없다**
+  // 수사관 프로필 (026). 전부 nullable — **사무장은 bar_no 가 없다**
   bar_no?: string | null; firm_name?: string | null; position?: string | null
   bar_association?: string | null; practice_areas?: string[] | null
   phone?: string | null; office_phone?: string | null; office_address?: string | null
@@ -19,9 +19,9 @@ export const toUser = (r: UserRow) => ({
   name: r.name,
   role: r.role,
   department: r.department,
-  // **LEP 에서는 쓰지 않는다** — 영업 목표액이다. 화면에서 감췄고 컬럼만 남겨 뒀다 (026).
+  // **IEP 에서는 쓰지 않는다** — 영업 목표액이다. 화면에서 감췄고 컬럼만 남겨 뒀다 (026).
   monthlyTargetKrw: r.monthly_target_krw,
-  // 변호사 프로필 (026). 사무장은 barNo 가 비어 있다.
+  // 수사관 프로필 (026). 사무장은 barNo 가 비어 있다.
   barNo: r.bar_no ?? null,
   firmName: r.firm_name ?? null,
   position: r.position ?? null,
@@ -60,7 +60,7 @@ export async function updateUser(db: pg.Client, userId: string, data: Record<str
   if (typeof data.name === 'string' && data.name.trim()) put('name', data.name.trim())
   if (typeof data.department === 'string') put('department', data.department)
   if (typeof data.monthlyTargetKrw === 'number') put('monthly_target_krw', data.monthlyTargetKrw)
-  // 변호사 프로필 (026). **role 과 email 은 여기 없다** — 화이트리스트 밖은 무시된다.
+  // 수사관 프로필 (026). **role 과 email 은 여기 없다** — 화이트리스트 밖은 무시된다.
   text('barNo', 'bar_no')
   text('firmName', 'firm_name')
   text('position', 'position')

@@ -49,7 +49,7 @@ export interface Meeting {
   analysisStartedAt?: string | null;
   /** 분석 방식 (016). legal=법률 상담 · business=수임 상담 · general=일반 */
   kind?: 'legal' | 'business' | 'general';
-  /** 사건. **없어도 정상이다** — 모든 미팅이 사건 상담은 아니다 */
+  /** 수사사건. **없어도 정상이다** — 모든 조사가 수사사건 조사는 아니다 */
   matterId?: string | null;
   /** 비닉권 대상 (021). 참이면 화면과 내보내기에 고지가 박힌다 */
   privileged?: boolean;

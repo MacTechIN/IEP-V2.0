@@ -10,7 +10,7 @@ import type { User } from '../types';
 
 /** 무엇이 막고 있는지 **한국어로** 말한다. `matters: 3` 은 관리자에게 아무 뜻이 없다. */
 const BLOCKER_LABEL: Record<string, string> = {
-  matters: '사건', meetings: '상담', customers: '의뢰인',
+  matters: '수사사건', meetings: '조사', customers: '대상자',
   recordings: '녹음', emails: '보낸 메일',
 };
 const REMOVED_LABEL: Record<string, string> = {
@@ -92,8 +92,8 @@ export default function AdminUsersPage() {
     try {
       const res = await apiClient.adminTransferMatters(target.id, transferTo);
       const d = res.data;
-      const parts = [['사건', d.matters], ['기한', d.deadlines], ['의뢰인', d.customers],
-                     ['상담', d.meetings], ['녹음', d.recordings], ['메일', d.emails]]
+      const parts = [['수사사건', d.matters], ['기한', d.deadlines], ['대상자', d.customers],
+                     ['조사', d.meetings], ['녹음', d.recordings], ['메일', d.emails]]
         .filter(([, n]) => Number(n) > 0).map(([k, n]) => `${k} ${n}건`);
       setMsg(`${parts.join(' · ') || '옮길 것 없음'} → ${d.to}`);
       await openDelete(target);   // 미리보기를 다시 본다 — 막는 것이 줄었을 것이다
@@ -254,8 +254,8 @@ export default function AdminUsersPage() {
                       ))}
                     </MuiBox>
                     <Typography variant="caption">
-                      <b>사건은 담당자만 봅니다.</b> 지우거나 잠그기 전에 다른 변호사에게 넘기지 않으면
-                      그 사건들을 <b>아무도 열 수 없게 됩니다.</b>
+                      <b>수사사건은 담당자만 봅니다.</b> 지우거나 잠그기 전에 다른 수사관에게 넘기지 않으면
+                      그 수사사건들을 <b>아무도 열 수 없게 됩니다.</b>
                     </Typography>
                   </Alert>
                 ) : (
@@ -281,7 +281,7 @@ export default function AdminUsersPage() {
                       </Button>
                     </Stack>
                     <Typography variant="caption" color="text.secondary">
-                      사건·기한·의뢰인·상담·녹음·메일을 <b>전부</b> 넘깁니다.
+                      수사사건·기한·대상자·조사·녹음·메일을 <b>전부</b> 넘깁니다.
                       넘긴 사실은 감사 기록에 남습니다.
                     </Typography>
                   </MuiBox>

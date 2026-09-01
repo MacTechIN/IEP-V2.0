@@ -35,22 +35,22 @@ app.post('/meetings', async (c) => {
     durationMinutes?: number; notes?: string
     /** 분석 방식 (016). 안 보내면 general — 법률 분석을 잘못 거는 쪽이 더 나쁘다 */
     kind?: string
-    /** 사건. **없어도 정상이다** — 모든 미팅이 사건 상담은 아니다 */
+    /** 사건. **없어도 정상이다** — 모든 조사이 사건 조사은 아니다 */
     matterId?: string
   }
   const b: Body = await c.req.json<Body>().catch(() => ({} as Body))
 
   const title = b.title?.trim()
   if (!title) return c.json(fail(400, 'title is required'), 400)
-  // **의뢰인이 없어도 만들 수 있다** (016) — 사무소 내부 회의·거래처 미팅.
-  // SEP 에서는 필수였다(영업 미팅에는 항상 고객사가 있다). LEP 에서는 아니다.
-  // start/end 는 NOT NULL 이다. 화면은 둘 다 같은 값을 보낸다(미팅 시각 하나만 입력받는다).
+  // **대상자이 없어도 만들 수 있다** (016) — 사무소 내부 회의·거래처 조사.
+  // SEP 에서는 필수였다(조사에는 항상 대상자가 있다). IEP 에서는 아니다.
+  // start/end 는 NOT NULL 이다. 화면은 둘 다 같은 값을 보낸다(조사 시각 하나만 입력받는다).
   const startTime = b.startTime || new Date().toISOString()
   const endTime = b.endTime || startTime
 
   const out = await withDb(c.env, async (db) => {
-    // 남의 의뢰인에 미팅을 만들 수 없게 한다. FK 만 믿으면 ID 를 아는 것만으로 통과한다.
-    // **없으면 검사할 것도 없다** — 의뢰인 없는 미팅은 정상이다.
+    // 남의 대상자에 조사을 만들 수 없게 한다. FK 만 믿으면 ID 를 아는 것만으로 통과한다.
+    // **없으면 검사할 것도 없다** — 대상자 없는 조사은 정상이다.
     if (b.customerId && !await CUS.getCustomer(db, b.customerId, u.sub, u.role === 'admin')) return null
     return M.createMeeting(db, {
       userId: u.sub, customerId: b.customerId || null, title,
@@ -112,10 +112,10 @@ app.get('/analysis/meeting/:id', async (c) => {
 
 /** 액션 아이템 완료 체크 저장. 소유자(또는 관리자)만. */
 /**
- * 분석 결과만 지운다. **미팅·메모·녹음·녹취는 남는다.**
+ * 분석 결과만 지운다. **조사·메모·녹음·녹취는 남는다.**
  *
  * 근거가 없는 분석(녹음 0건으로 제목만 보고 나온 것 등)을 치우는 길이 그전에는
- * 미팅을 통째로 지우는 것뿐이었다 — 그러면 사람이 직접 쓴 메모까지 사라진다.
+ * 조사을 통째로 지우는 것뿐이었다 — 그러면 사람이 직접 쓴 메모까지 사라진다.
  * 지운 뒤 상태는 `pending` 이라, 녹음을 붙여 다시 분석하면 그 자리에 들어간다.
  */
 app.delete('/analysis/meeting/:id', async (c) => {
@@ -140,10 +140,10 @@ app.patch('/analysis/meeting/:id/action-items', async (c) => {
   return c.json({ success: true, data: { actionItemsDone: out } })
 })
 
-/** 녹취 조회. **법률 상담이면 감사에 남긴다** — 상담 내용 그 자체이기 때문이다 (021). */
+/** 녹취 조회. **조사이면 감사에 남긴다** — 조사 내용 그 자체이기 때문이다 (021). */
 app.get('/analysis/meeting/:id/transcript', async (c) => {
   const u = c.get('user'); const id = c.req.param('id')
-  // 원본에는 소유권 검사가 없었다 — 남의 미팅 녹취 전문을 ID 만으로 읽을 수 있었다
+  // 원본에는 소유권 검사가 없었다 — 남의 조사 녹취 전문을 ID 만으로 읽을 수 있었다
   const out = await withDb(c.env, async (db) => {
     if (!await M.getMeeting(db, id, u.sub, u.role === 'admin')) return null
     return M.getSegments(db, id)
@@ -188,7 +188,7 @@ app.post('/analysis/meeting/:id/segments/:segId/revert', async (c) => {
 })
 
 /**
- * 미팅노트와 AI요약만 다시 만든다.
+ * 조사노트와 AI요약만 다시 만든다.
  *
  * 리포트·지표·코칭·스코어카드, 그리고 **체크한 후속 조치는 건드리지 않는다.**
  */
@@ -208,7 +208,7 @@ app.post('/analysis/meeting/:id/renote', async (c) => {
 })
 
 /**
- * 끝난 상담을 사건에 붙인다 (030).
+ * 끝난 조사을 사건에 붙인다 (030).
  *
  * **`PATCH /meetings/:id` 로 하지 않는다.** 칸 하나 바꾸는 일이 아니라
  * 사건 자료를 다시 만드는 일이고, 실패하는 방식이 여러 가지라 각각 다른 답을 줘야 한다.
@@ -223,7 +223,7 @@ app.post('/meetings/:id/matter', async (c) => {
     attachMeetingToMatter(db, id, matterId, u.sub, u.role === 'admin'))
 
   if ('code' in r) {
-    if (r.code === 'MEETING_NOT_FOUND') return c.json(fail(404, '상담을 찾을 수 없습니다'), 404)
+    if (r.code === 'MEETING_NOT_FOUND') return c.json(fail(404, '조사을 찾을 수 없습니다'), 404)
     if (r.code === 'MATTER_NOT_FOUND') return c.json(fail(404, '사건을 찾을 수 없습니다'), 404)
     return c.json({
       success: false,
@@ -244,12 +244,12 @@ app.post('/meetings/:id/matter', async (c) => {
   return c.json({ success: true, data: r })
 })
 
-/** 뗀다. 이 상담이 만든 시계열·증거만 지운다. */
+/** 뗀다. 이 조사이 만든 시계열·증거만 지운다. */
 app.delete('/meetings/:id/matter', async (c) => {
   const u = c.get('user'); const id = c.req.param('id')
   const r = await withDb(c.env, (db) =>
     detachMeetingFromMatter(db, id, u.sub, u.role === 'admin'))
-  if ('code' in r) return c.json(fail(404, '상담을 찾을 수 없습니다'), 404)
+  if ('code' in r) return c.json(fail(404, '조사을 찾을 수 없습니다'), 404)
   await withDb(c.env, (db) => M.logAccess(db, {
     userId: u.sub, userEmail: u.email, action: 'update', target: 'meeting',
     targetId: id, detail: { detached: true, ...r },
@@ -358,7 +358,7 @@ app.post('/meetings/:id/audio', async (c) => {
   const ext = (audio.name.match(/\.[a-z0-9]+$/i)?.[0] || '.audio').toLowerCase()
   const key = `meetings/${id}${ext}`
 
-  // 같은 미팅에 이미 올라온 것이 있으면 그 키를 기억해 둔다. 키가 미팅 id + **확장자**라,
+  // 같은 조사에 이미 올라온 것이 있으면 그 키를 기억해 둔다. 키가 조사 id + **확장자**라,
   // .webm 을 올렸다가 .m4a 를 올리면 키가 달라져 옛 파일이 아무도 안 가리키는 채로 남는다.
   // 덮어쓴다고 적혀 있었지만 확장자가 같을 때만 그렇다.
   const prev = await withDb(c.env, (db) => db.query<{ audio_url: string | null }>(
@@ -414,8 +414,8 @@ app.post('/meetings/:id/analyze', async (c) => {
     return c.json(fail(409, '이미 분석이 진행 중입니다'), 409)
   }
 
-  // 녹음 중에 쌓인 코칭 판정을 이 미팅에 붙인다 (015).
-  // 코칭은 미팅보다 먼저 돌기 때문에 `session_id` 로만 쌓여 있다.
+  // 녹음 중에 쌓인 코칭 판정을 이 조사에 붙인다 (015).
+  // 코칭은 조사보다 먼저 돌기 때문에 `session_id` 로만 쌓여 있다.
   // **실패해도 분석을 막지 않는다** — 연결은 자료를 쓰기 좋게 하는 것이고 분석의 전제가 아니다.
   const coachingSessionId = typeof body.coachingSessionId === 'string' ? body.coachingSessionId : ''
   if (coachingSessionId) {
@@ -428,7 +428,7 @@ app.post('/meetings/:id/analyze', async (c) => {
   }
 
   let ids = Array.isArray(body.recordingIds) ? (body.recordingIds as string[]) : []
-  // 선택한 녹음을 미팅에 붙인다 (원본 RecordingService.attach 와 같은 일)
+  // 선택한 녹음을 조사에 붙인다 (원본 RecordingService.attach 와 같은 일)
   if (ids.length) await withDb(c.env, (db) => REC.attachRecordings(db, id, ids, u.sub))
 
   /**
@@ -436,7 +436,7 @@ app.post('/meetings/:id/analyze', async (c) => {
    *
    * 예전에는 `recordingIds` 가 없으면 `metadata` 로 돌았다. 그건 「제목만으로 분석」 이라
    * 전사문을 안 보고, 끝나면 기존 결과를 **「분석된 녹음이 없습니다」 로 덮어썼다.**
-   * 녹음이 여덟 개나 붙어 있는 미팅에서도 그랬다 — 인자 하나 빠뜨리면 멀쩡한 분석이 사라진다.
+   * 녹음이 여덟 개나 붙어 있는 조사에서도 그랬다 — 인자 하나 빠뜨리면 멀쩡한 분석이 사라진다.
    * 2026-08-27 에 실제로 그렇게 날렸다.
    *
    * 붙어 있는 녹음이 있으면 그것으로 돈다. `metadata` 는 **녹음이 정말 없을 때만**이다.
@@ -460,7 +460,7 @@ app.post('/meetings/:id/analyze', async (c) => {
    */
   if (!ids.length && body.allowMetadata !== true) {
     return c.json(fail(400,
-      '이 미팅에는 분석할 녹음이 없습니다. 제목만으로 분석하려면 allowMetadata 를 켜 주십시오'), 400)
+      '이 조사에는 분석할 녹음이 없습니다. 제목만으로 분석하려면 allowMetadata 를 켜 주십시오'), 400)
   }
   const instance = await c.env.ANALYSIS.create({
     params: ids.length
@@ -513,7 +513,7 @@ app.post('/risk', async (c) => {
   }
   // 종류가 코칭 내용을 정한다 (016). 안 오면 가장 조용한 쪽(general)으로 떨어진다.
   const kind = str('kind')
-  // **코칭 프롬프트도 밖으로 나간다** (021). 법률 상담이면 가리고 보낸다.
+  // **코칭 프롬프트도 밖으로 나간다** (021). 조사이면 가리고 보낸다.
   // 25초 조각이라 대응표는 남기지 않는다 — 되돌릴 일이 없고, 보관을 늘릴 이유도 없다.
   const outbound = kind === 'legal' ? maskPii(text).text : text
   const assessment = await R.assessRisk(c.env, outbound, str('context') || undefined, kind)
@@ -583,7 +583,7 @@ app.patch('/coaching/:id/feedback', async (c) => {
 })
 
 /**
- * 법률 분해 결과 (018). 상담 단위(원문·findings)와 사건 단위(요건·타임라인·증거)를 함께 준다.
+ * 법률 분해 결과 (018). 조사 단위(원문·findings)와 사건 단위(요건·타임라인·증거)를 함께 준다.
  *
  * **담기만 하고 못 꺼내면 없는 것과 같다.**
  */
@@ -602,7 +602,7 @@ app.get('/legal/meeting/:id', async (c) => {
       matterId ? db.query(`select cause, element, status, note, sort_order
                              from v2.legal_elements where matter_id = $1 order by sort_order`, [matterId])
                : Promise.resolve({ rows: [] as unknown[] }),
-      // 타임라인·증거는 **사건 전체**다 — 이 상담 것만 보여 주면 시계열이 끊긴다.
+      // 타임라인·증거는 **사건 전체**다 — 이 조사 것만 보여 주면 시계열이 끊긴다.
       matterId ? db.query(`select id, occurred_on, precision, what, legal_meaning, meeting_id
                              from v2.timeline_events where matter_id = $1
                             order by occurred_on nulls last`, [matterId])
@@ -612,7 +612,7 @@ app.get('/legal/meeting/:id', async (c) => {
                : Promise.resolve({ rows: [] as unknown[] }),
     ])
     // **여는 것 자체를 남긴다** (021). 실패해도 조회를 막지 않는다 —
-    // 감사 때문에 변호사가 자기 사건을 못 보면 안 된다.
+    // 감사 때문에 수사관가 자기 사건을 못 보면 안 된다.
     await M.logAccess(db, {
       userId: u.sub, userEmail: u.email, action: 'view', target: 'legal',
       targetId: id, matterId,
@@ -635,7 +635,7 @@ app.get('/legal/meeting/:id', async (c) => {
   return c.json({ success: true, data: out })
 })
 
-/** 이 미팅의 코칭 타임라인. 언제 무엇이 떴고 무엇을 눌렀는지. */
+/** 이 조사의 코칭 타임라인. 언제 무엇이 떴고 무엇을 눌렀는지. */
 app.get('/coaching/meeting/:id', async (c) => {
   const u = c.get('user'); const id = c.req.param('id')
   const out = await withDb(c.env, async (db) => {
@@ -661,7 +661,7 @@ app.post('/recordings', async (c) => {
   return c.json({ success: true, data: rec }, 201)
 })
 
-/** 이 미팅의 녹음 목록. 재생기가 무엇을 틀지 고르는 데 쓴다 (012). */
+/** 이 조사의 녹음 목록. 재생기가 무엇을 틀지 고르는 데 쓴다 (012). */
 app.get('/meetings/:id/recordings', async (c) => {
   const u = c.get('user'); const id = c.req.param('id')
   const out = await withDb(c.env, async (db) => {

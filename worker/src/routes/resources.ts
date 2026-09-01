@@ -56,7 +56,7 @@ app.patch('/customers/:id', async (c) => {
   const body: Record<string, unknown> =
     await c.req.json<Record<string, unknown>>().catch(() => ({}))
   const row = await withDb(c.env, async (db) => {
-    // 남의 고객이면 여기서 null 이므로 수정도 못 한다
+    // 남의 대상자이면 여기서 null 이므로 수정도 못 한다
     if (!await C.getCustomer(db, id, u.sub, u.role === 'admin')) return null
     await C.updateCustomer(db, id, body)
     return C.getCustomer(db, id, u.sub, u.role === 'admin')
@@ -125,7 +125,7 @@ app.post('/actions', async (c) => {
   }
   const u = c.get('user')
   const row = await withDb(c.env, async (db) => {
-    // 내 미팅에만 액션을 달 수 있다. 원본에는 이 검사가 없었다.
+    // 내 조사에만 액션을 달 수 있다. 원본에는 이 검사가 없었다.
     const owned = await db.query(
       'select 1 from v2.meetings where id = $1 and ($2::boolean or user_id = $3)',
       [body.meetingId, u.role === 'admin', u.sub])
@@ -280,7 +280,7 @@ app.get('/admin/users/:id/deletion', requireAdmin, async (c) => {
  * 막는 것은 셋이다 —
  *   1. 자기 자신 (지우면 되살릴 사람이 없어질 수 있다)
  *   2. 마지막 관리자 (사무소가 문을 못 연다)
- *   3. 사건·상담·고객을 가진 사람 → **DB 함수가 막는다** (`023`)
+ *   3. 사건·조사·대상자을 가진 사람 → **DB 함수가 막는다** (`023`)
  *
  * 그리고 **이메일을 그대로 적어야 한다.** 목록에서 잘못 누르는 것을 막는 유일한 방법이다.
  */
