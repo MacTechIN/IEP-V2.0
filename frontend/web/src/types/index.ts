@@ -47,8 +47,8 @@ export interface Meeting {
   analysisNote?: string | null;
   /** 한 번이라도 분석을 시작했는가. null 이면 아직 돌린 적이 없다는 뜻이다. */
   analysisStartedAt?: string | null;
-  /** 분석 방식 (016). legal=법률 상담 · business=수임 상담 · general=일반 */
-  kind?: 'legal' | 'business' | 'general';
+  /** 조사 종류 (016·031). interrogation·witness·victim·interview·meeting */
+  kind?: 'interrogation' | 'witness' | 'victim' | 'interview' | 'meeting';
   /** 수사사건. **없어도 정상이다** — 모든 조사가 수사사건 조사는 아니다 */
   matterId?: string | null;
   /** 비닉권 대상 (021). 참이면 화면과 내보내기에 고지가 박힌다 */

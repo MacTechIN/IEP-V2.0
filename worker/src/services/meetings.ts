@@ -16,7 +16,7 @@ export interface MeetingRow {
   analysis_stage?: string | null; analysis_error?: string | null
   /** 실패는 아니지만 덜 된 것 (028) */
   analysis_note?: string | null
-  /** 분석 방식을 정한다 (016). legal · business · general */
+  /** 조사 종류를 정한다 (016·031). interrogation·witness·victim·interview·meeting */
   kind?: string | null
   matter_id?: string | null
   privileged?: boolean | null
@@ -97,7 +97,7 @@ export async function createMeeting(db: pg.Client, m: NewMeeting): Promise<Meeti
     m.userId, m.customerId, m.title,
     m.startTime, m.endTime, m.durationMinutes || 0, m.notes || null,
     // **모르는 값이 오면 general 이다.** 법률 분석을 잘못 거는 쪽이 더 나쁘다 (016).
-    ['legal', 'business', 'general'].includes(String(m.kind)) ? m.kind : 'general',
+    ['interrogation', 'witness', 'victim', 'interview', 'meeting'].includes(String(m.kind)) ? m.kind : 'interview',
     m.matterId || null,
   ])
   if (!row) throw new Error('meeting insert returned no row')

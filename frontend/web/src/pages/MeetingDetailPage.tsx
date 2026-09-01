@@ -129,7 +129,7 @@ export default function MeetingDetailPage() {
             apiClient.getTranscript(id).catch(() => null),
             apiClient.getMeetingRecordings(id).catch(() => null),
             // 법률 상담일 때만 부른다 — 일반 조사에는 담긴 것이 없다.
-            m.kind === 'legal' ? apiClient.getLegalAnalysis(id).catch(() => null) : Promise.resolve(null),
+            Promise.resolve(null),   // IEP: 법률 분해 없음 (S4 에서 진술 분석으로 교체)
           ]);
           if (legalResponse?.success) setLegal(legalResponse.data);
           if (!alive) return;
@@ -376,7 +376,7 @@ export default function MeetingDetailPage() {
   }
 
   /** 법률 상담인가. 「고객」·「영업자」 라는 말을 쓰지 않는 자리들이 이 값을 본다 (016). */
-  const legalKind = meeting.kind === 'legal';
+  const legalKind = false;  // IEP: 법률 분해 없음 (S4 에서 진술 분석으로 교체)
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -472,14 +472,14 @@ export default function MeetingDetailPage() {
       >
         <Tab label={`조사노트 (${segments.length})`} value="note" />
         {/* **법률 상담일 때만 보인다.** 일반 조사에 빈 탭을 띄우지 않는다 (016) */}
-        {meeting.kind === 'legal' && (
+        {legalKind && (
           <Tab label={`사실관계${legal?.findings?.length ? ` · 확인 ${legal.findings.length}` : ''}`} value="legal" />
         )}
         <Tab label="리포트" value="report" />
         {/* **법률 상담에는 지표 탭을 띄우지 않는다.**
             딜 강도·조사 점수·스코어카드는 전부 영업 척도다. 법률 상담에 붙이면
             수사관이 자기 조사를 「딜」로 채점당한다 — 이 제품이 하려는 일이 아니다. */}
-        {meeting.kind !== 'legal' && <Tab label="지표" value="metrics" />}
+        {!legalKind && <Tab label="지표" value="metrics" />}
       </Tabs>
 
       {/* ── 사실관계 탭 (법률 상담 전용, 018) ──
@@ -1165,7 +1165,7 @@ export default function MeetingDetailPage() {
         </>
       )}
 
-      {analysis && tab === 'metrics' && meeting.kind !== 'legal' && (
+      {analysis && tab === 'metrics' && !legalKind && (
         <>
           {/* 스코어카드 — 축마다 점수·근거·조언. 저장돼 있었지만 화면에 없던 것이다 */}
           {analysis.scorecard?.axes && Object.keys(analysis.scorecard.axes).length > 0 && (

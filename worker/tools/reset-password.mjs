@@ -29,7 +29,7 @@ import { stdin, stdout } from 'node:process'
 import bcrypt from 'bcryptjs'
 import pg from 'pg'
 
-const MIN = 6   // src/lib/auth.ts 의 MIN_PASSWORD_LENGTH 와 같아야 한다 (LEP 은 6, SEP 는 9)
+const MIN = 8   // src/lib/auth.ts 와 같아야 한다 (IEP: 영문+숫자 8자)
 
 /**
  * 입력을 받는다.

@@ -53,17 +53,23 @@ type RecState = 'idle' | 'recording' | 'paused';
  * **녹음을 누르기 전에 정해져야 한다.** 실시간 코칭이 종류에 따라 다른 것을 말하기 때문이다.
  * 기본은 `general` — 잘못 걸었을 때 덜 나쁜 쪽이다. 나중에 다시 분석할 수 있다.
  */
-type MeetingKind = 'legal' | 'business' | 'general';
+type MeetingKind = 'interrogation' | 'witness' | 'victim' | 'interview' | 'meeting';
 
+// IEP 조사 종류 (§6-A). 분석·코칭이 이 값으로 갈린다.
+// **거짓말·심리 판정은 어느 종류에서도 하지 않는다** — 확인할 점을 짚을 뿐이다.
 const MEETING_KINDS: { kind: MeetingKind; label: string; hint: string }[] = [
-  { kind: 'legal',    label: '상담 (법률)',
-    hint: '사실·주장·법적 요건을 나누고, 빠진 것과 어긋나는 것을 찾습니다' },
-  { kind: 'business', label: '수임 상담',
-    hint: '수임을 따내는 자리 — 상대의 관심과 우려를 분석합니다' },
-  { kind: 'general',  label: '일반',
-    hint: '요약과 후속 조치만. 법적 분해도 점수도 하지 않습니다' },
+  { kind: 'interrogation', label: '피의자 신문',
+    hint: '진술의 앞뒤·확인 필요 사항·절차를 참고로 짚습니다. 판정하지 않습니다' },
+  { kind: 'witness',       label: '참고인 조사',
+    hint: '진술 요지와 확인이 필요한 지점을 정리합니다' },
+  { kind: 'victim',        label: '피해자 조사',
+    hint: '피해 사실을 정리합니다. 압박·모순 짚기를 하지 않습니다' },
+  { kind: 'interview',     label: '일반 면담',
+    hint: '요지와 다음에 확인할 점만 정리합니다' },
+  { kind: 'meeting',       label: '수사 회의',
+    hint: '결정과 다음 할 일만. 대상자 분석은 하지 않습니다' },
 ];
-const KIND_PREF_KEY = 'lep.meetingKind';
+const KIND_PREF_KEY = 'iep.investigationKind';
 interface RecItem {
   key: string;
   id?: string;
@@ -106,14 +112,15 @@ export default function UploadPage() {
    */
   const [meetingKind, setMeetingKind] = useState<MeetingKind>(() => {
     try {
+      const VALID = ['interrogation','witness','victim','interview','meeting'];
       const v = localStorage.getItem(KIND_PREF_KEY);
-      return v === 'business' ? 'business' : 'general';
-    } catch { return 'general'; }
+      return (v && VALID.includes(v)) ? (v as MeetingKind) : 'interview';
+    } catch { return 'interview'; }
   });
   useEffect(() => {
     meetingKindRef.current = meetingKind;
     try {
-      localStorage.setItem(KIND_PREF_KEY, meetingKind === 'legal' ? 'general' : meetingKind);
+      localStorage.setItem(KIND_PREF_KEY, meetingKind);
     } catch { /* 사생활 모드 */ }
   }, [meetingKind]);
 
@@ -161,7 +168,7 @@ export default function UploadPage() {
   const dangerStreakRef = useRef(0);
   const lastRiskTextRef = useRef('');
   // 25초 루프는 클로저 안에서 돈다 — state 를 그대로 읽으면 녹음 시작 시점 값에 묶인다.
-  const meetingKindRef = useRef<MeetingKind>('general');
+  const meetingKindRef = useRef<MeetingKind>('interview');
 
   const [error, setError] = useState('');
   const [phase, setPhase] = useState<'form' | 'creating' | 'analyzing'>('form');
@@ -935,7 +942,7 @@ export default function UploadPage() {
               {MEETING_KINDS.map((k) => (
                 <Button key={k.kind} size="small"
                   variant={meetingKind === k.kind ? 'contained' : 'outlined'}
-                  color={k.kind === 'legal' ? 'secondary' : 'primary'}
+                  color={k.kind === 'interrogation' ? 'secondary' : 'primary'}
                   disabled={recordingActive || busy}
                   onClick={() => setMeetingKind(k.kind)}>
                   {k.label}

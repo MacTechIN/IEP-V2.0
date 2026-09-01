@@ -30,7 +30,7 @@ export default function LoginPage() {
         if (res.data) dispatch(loginSuccess(res.data));
         navigate('/');
       } else {
-        setError('로그인에 실패했습니다. 이메일/비밀번호를 확인하세요.');
+        setError('로그인에 실패했습니다. 아이디/비밀번호를 확인하세요.');
       }
     } catch (err: any) {
       setError(err?.error?.message || '로그인에 실패했습니다.');
@@ -63,8 +63,8 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             <TextField
-              label="이메일"
-              type="email"
+              label="아이디"
+              type="text"
               fullWidth
               margin="normal"
               value={email}

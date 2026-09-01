@@ -250,7 +250,7 @@ class APIClient {
   async riskCheck(clip: File, opts: {
     context?: string; sessionId?: string; atMs?: number; dangerStreak?: number;
     /** 조사 종류 (016). 서버가 이걸 보고 무엇을 물을지 정한다 — 일반 조사에 법률 코칭을 걸지 않는다 */
-    kind?: 'legal' | 'business' | 'general';
+    kind?: 'interrogation' | 'witness' | 'victim' | 'interview' | 'meeting';
   } = {}): Promise<ApiResponse> {
     const form = new FormData();
     form.append('audio', clip);

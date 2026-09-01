@@ -130,12 +130,16 @@ export function hashPassword(plain: string): string {
  * 올리면 이미 쓰고 있는 비밀번호로 로그인은 되는데 변경은 거부되는 상태가 된다.
  * 세 경로(계정 생성 · 본인 변경 · 관리자 재설정)가 모두 이 값을 본다.
  */
-export const MIN_PASSWORD_LENGTH = 6
+export const MIN_PASSWORD_LENGTH = 8   // IEP: 영문+숫자 조합 8자 (2026-09-01)
 
 /** 통과하면 null, 아니면 사용자에게 보여줄 이유. */
 export function passwordProblem(plain: string): string | null {
   if (plain.length < MIN_PASSWORD_LENGTH) {
     return `비밀번호는 ${MIN_PASSWORD_LENGTH}자 이상이어야 합니다`
+  }
+  // IEP: **영문과 숫자를 모두 포함**한다. 조사관 계정이라 최소한의 강도를 둔다.
+  if (!/[A-Za-z]/.test(plain) || !/[0-9]/.test(plain)) {
+    return '비밀번호는 영문과 숫자를 모두 포함해야 합니다'
   }
   return null
 }
