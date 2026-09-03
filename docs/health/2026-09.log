@@ -63,3 +63,8 @@
   느림: auth 3543ms
   web: index-4r4xCRKc.js
   analysis: 24h 미팅 0 · 실패 0
+2026-09-03 21:37  DOWN  web=468ms api=341ms stream=FAIL auth=4311ms db=1419ms transcribe=ok analysis=ok
+  실패: stream(Failed to parse URL from /health)
+  느림: auth 4311ms
+  web: index-4r4xCRKc.js
+  analysis: 24h 미팅 0 · 실패 0
