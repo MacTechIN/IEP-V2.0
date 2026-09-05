@@ -1175,3 +1175,15 @@
       · Repository 가 아니라 Environment 시크릿으로 넣었다 (워크플로가 environment 를 안 쓴다)
       · 이름 철자가 다르다 — 위에 적힌 이름과 글자까지 같아야 한다
   오프사이트: 미설정 — **계정 밖 사본이 없습니다** (R2_ACCESS_KEY_ID · R2_SECRET_ACCESS_KEY · OFFSITE_ENDPOINT · OFFSITE_ACCESS_KEY_ID · OFFSITE_SECRET_ACCESS_KEY)
+2026-09-05 20:22Z  못봄
+  못봄 — 자격증명이 모자랍니다
+    CF_ACCOUNT_ID  있음 · 32자
+    R2_ACCESS_KEY_ID  **비어 있음** — 값 없이 등록된 것 같습니다
+    R2_SECRET_ACCESS_KEY  **비어 있음** — 값 없이 등록된 것 같습니다
+    R2 API 토큰 발급 화면에 Access Key ID 와 Secret Access Key 가 함께 나옵니다.
+    토큰 등급은 **Object Read & Write** 로 충분합니다 — 그것이 이 설계의 값입니다.
+    **없음** 이 있다면 흔한 원인 셋:
+      · Secrets 가 아니라 Variables 에 넣었다 (같은 화면의 다른 탭이다)
+      · Repository 가 아니라 Environment 시크릿으로 넣었다 (워크플로가 environment 를 안 쓴다)
+      · 이름 철자가 다르다 — 위에 적힌 이름과 글자까지 같아야 한다
+  오프사이트: 미설정 — **계정 밖 사본이 없습니다** (R2_ACCESS_KEY_ID · R2_SECRET_ACCESS_KEY · OFFSITE_ENDPOINT · OFFSITE_ACCESS_KEY_ID · OFFSITE_SECRET_ACCESS_KEY)
