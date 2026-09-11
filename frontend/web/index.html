@@ -1,9 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      lang 이 "en" 이면 모바일 브라우저가 한국어 화면을 "외국어" 로 오인해 자동 번역을 걸고,
+      한국어를 한국어로 다시 번역하며 라벨을 뭉갠다 (SEP v2 에서 실제 접수됨, 2026-09-09).
+      한국어 전용 제품이라 자동 번역 자체를 막는다 — 번역이 도울 일이 없고 화면만 깨뜨린다.
+    -->
+    <meta name="google" content="notranslate" />
     <title>IEP - Investigate Enablement Platform</title>
   </head>
   <body>
