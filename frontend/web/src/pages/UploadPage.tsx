@@ -206,15 +206,25 @@ export default function UploadPage() {
     })();
     // 지난번에 올라가지 못한 녹음이 있으면 알린다
     (async () => {
-      await pruneOlderThan(7);
+      // 7일은 너무 짧았다 — 못 올라간 유일본이 진단·복구 전에 지워졌다. 30일로 넓힌다.
+      await pruneOlderThan(30);
       setRecovered(await listPending());
       setBackupInfo(await inspectBackup());
     })();
-    return () => clearInterval(timerRef.current);
+    return () => { clearInterval(timerRef.current); releaseWakeLock(); };
   }, []);
   useEffect(() => { recsRef.current = recs; }, [recs]);
 
   const recordingActive = recState !== 'idle';
+
+  // 탭이 다시 보이면 화면 꺼짐 방지를 다시 건다 — wakeLock 은 탭이 숨으면 자동 해제된다.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && recordingActive) void acquireWakeLock();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [recordingActive]);
 
   /**
    * 녹음 중에는 **세션이 끊겨도 화면을 옮기지 않는다.**
@@ -607,6 +617,13 @@ export default function UploadPage() {
    */
   const OVERLAP_MS = 15 * 1000;
 
+  /**
+   * **구간 크기 상한 (BEP 이식).** 한 구간이 이 크기에 닿으면 시간과 무관하게 끊는다.
+   * 업로드 한도(100MB) 밑에서 무조건 회전시켜, 백그라운드에서 회전 타이머가 얼어붙어도
+   * 한 구간이 **절대 못 올라갈 크기**가 되지 않게 하는 마지막 브레이크다.
+   */
+  const HARD_MAX_BYTES = 80 * 1024 * 1024;
+
   /** 지금 살아 있는 레코더들. 겹치는 동안 둘이 된다 — 멈추고 재개할 때 전부 다뤄야 한다. */
   const liveRecordersRef = useRef<Set<MediaRecorder>>(new Set());
   /** 구간마다 걸어 둔 타이머. 끝낼 때 전부 걷는다. */
@@ -637,15 +654,44 @@ export default function UploadPage() {
     const parts: Blob[] = [];
     let seq = 0;
 
+    // 회전 브레이크 기준값. **벽시계**(Date.now)와 **누적 크기**로 직접 끊는다 — 이 둘은
+    // 백그라운드에서도 믿을 수 있다. `nextOpened` 로 다음 구간을 한 번만 연다.
+    const segStartWall = Date.now();
+    let segBytes = 0;
+    let nextOpened = false;
+
     const mr = new MediaRecorder(stream);
     liveRecordersRef.current.add(mr);
+
+    // ① 겹침이 시작되는 시점에 **다음 구간을 연다.** 이 레코더는 아직 돌고 있다.
+    const openNext = () => {
+      if (nextOpened) return;                   // setTimeout 과 브레이크가 겹쳐 불러도 한 번만
+      if (stoppingRef.current) return;
+      if (mr.state === 'paused') { later(openNext, 5000); return; }
+      if (mr.state === 'inactive') return;      // 이미 끝났으면 다음은 없다
+      nextOpened = true;
+      startSegment(stream);
+    };
+    // ② 자기 시간이 다 차면 **스스로** 멈춘다. 다음 구간은 이미 15초째 돌고 있다.
+    const closeSelf = () => {
+      if (mr.state === 'inactive') return;
+      if (mr.state === 'paused') { later(closeSelf, 5000); return; }
+      try { mr.stop(); } catch { /* 이미 멈췄다 */ }
+    };
 
     mr.ondataavailable = (e) => {
       if (e.data.size === 0) return;
       parts.push(e.data);
+      segBytes += e.data.size;
       // 업로드 **전에** 남긴다. 여기서 실패해도 녹음은 계속된다.
       void backupChunk(sessionId, seq++, e.data, mr.mimeType || 'audio/webm')
         .then((okd) => { if (okd) setBackedUp((n) => n + 1); });
+      // **회전 브레이크.** 10분(벽시계) 넘겼거나 크기 상한에 닿으면 여기서 끊는다.
+      // 이 콜백은 레코더 자체 클럭이라 백그라운드에서도 떨어지므로 setTimeout 이 얼어도 회전한다.
+      if (Date.now() - segStartWall >= SEGMENT_MS || segBytes >= HARD_MAX_BYTES) {
+        openNext();
+        closeSelf();
+      }
     };
     mr.onstop = () => {
       liveRecordersRef.current.delete(mr);
@@ -666,29 +712,63 @@ export default function UploadPage() {
     mediaRef.current = mr;          // 화면이 보는 "지금 구간" 은 항상 가장 새 것
     mr.start(BACKUP_SLICE_MS);
 
-    // ① 겹침이 시작되는 시점에 **다음 구간을 연다.** 이 레코더는 아직 돌고 있다.
-    const openNext = () => {
-      if (stoppingRef.current) return;
-      // 일시정지 중이면 겹침을 시작하지 않는다 — 멈춰 있어야 할 자리에서 새 구간이 녹음한다.
-      if (mr.state === 'paused') { later(openNext, 5000); return; }
-      if (mr.state === 'inactive') return;      // 이미 끝났으면 다음은 없다
-      startSegment(stream);
-    };
+    // 포그라운드에서는 이 타이머가 먼저 정확히 끊는다. 브레이크는 타이머가 얼었을 때의 이중 안전.
     later(openNext, Math.max(1000, SEGMENT_MS - OVERLAP_MS));
-
-    // ② 자기 시간이 다 차면 **스스로** 멈춘다. 다음 구간은 이미 15초째 돌고 있다.
-    const closeSelf = () => {
-      if (mr.state === 'inactive') return;
-      if (mr.state === 'paused') { later(closeSelf, 5000); return; }
-      try { mr.stop(); } catch { /* 이미 멈췄다 */ }
-    };
     later(closeSelf, SEGMENT_MS);
+  };
+
+  // 화면 꺼짐 방지 — 녹음 중 화면이 잠기면 백그라운드 스로틀로 구간 회전 타이머가 얼어붙는다.
+  const wakeLockRef = useRef<any>(null);
+  const acquireWakeLock = async () => {
+    try {
+      const nav = navigator as any;
+      if (nav.wakeLock?.request) wakeLockRef.current = await nav.wakeLock.request('screen');
+    } catch { /* 지원 안 하거나 거부돼도 녹음은 된다 — 안전망이지 전제조건이 아니다 */ }
+  };
+  const releaseWakeLock = () => {
+    try { wakeLockRef.current?.release?.(); } catch { /* ignore */ }
+    wakeLockRef.current = null;
+  };
+
+  /**
+   * **마이크가 끊기는지 지켜본다 (BEP 이식).** 전화 수신·다른 앱 전환 때 OS 가 마이크를 가져가면
+   * 트랙이 muted/ended 된다. 그러면 화면은 "녹음 중" 인데 소리는 안 들어온다 — 그걸 모르는 게
+   * 가장 위험하다. 감지해서 **경고 + 자동 일시정지**하고, 마이크가 돌아오면 알린다.
+   */
+  const [micStatus, setMicStatus] = useState<'ok' | 'muted' | 'ended' | 'restored'>('ok');
+  const wireMicWatch = (stream: MediaStream) => {
+    const track = stream.getAudioTracks()[0];
+    if (!track) return;
+    track.onmute = () => {
+      if (stoppingRef.current) return;
+      setMicStatus('muted');
+      pauseRecording();                         // 무음을 녹음하지 않도록 자동 일시정지
+    };
+    track.onunmute = () => {
+      if (stoppingRef.current) return;
+      setMicStatus((s) => (s === 'ended' ? s : 'restored'));  // 자동 재개 안 함 — 사용자가 [이어서]
+    };
+    track.onended = () => {
+      if (stoppingRef.current) return;          // 완료 시 t.stop() 이 부르는 것과 구분
+      setMicStatus('ended');
+      pauseRecording();
+    };
+  };
+
+  // 화면을 **반드시** idle 로 넘긴다. onstop 이 안 떠도(살아있는 레코더가 없거나 먹통) 여기서 넘긴다.
+  const finalizeIdle = () => {
+    try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+    liveRecordersRef.current.clear();
+    setRecState('idle');
+    setElapsed(0);
   };
 
   const doStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      setMicStatus('ok');
+      wireMicWatch(stream);                           // 통화·앱전환으로 마이크 끊기면 감지·경고
       chunksRef.current = [];
       sessionIdRef.current = newSessionId();
       chunkSeqRef.current = 0;
@@ -700,6 +780,7 @@ export default function UploadPage() {
       setBackedUp(0);
       setElapsed(0);
       setRecState('recording');
+      void acquireWakeLock();                          // 녹음 내내 화면이 잠기지 않게
       startTimer();
       startSegment(stream);
       if (liveCoachingRef.current) startRiskLoop();   // 켠 사람에게만 돈다
@@ -714,10 +795,13 @@ export default function UploadPage() {
     stopTimer(); stopRiskLoop();
     // 자막도 함께 멈춘다 — 일시정지 중에도 소켓을 열어 두면 침묵에 요금이 나간다.
     stopCaption();
+    releaseWakeLock();                     // 멈춘 동안엔 화면 잠금을 막을 이유가 없다
     setRecState('paused');
   };
   const resumeRecording = () => {
+    setMicStatus('ok');                    // 사용자가 이어서 → 마이크 경고 해제
     for (const r of liveRecordersRef.current) { try { r.resume(); } catch { /* ignore */ } }
+    void acquireWakeLock();
     startTimer();
     if (liveCoachingRef.current) startRiskLoop();
     if (liveCaptionRef.current) startCaption();
@@ -725,11 +809,20 @@ export default function UploadPage() {
   };
   const finishRecording = () => {
     stoppingRef.current = true;            // 이 stop 은 교체가 아니라 끝이다
-    clearSegTimers();
-    stopTimer(); stopRiskLoop(); setLiveRisk(null);
-    stopCaption();
+    setMicStatus('ok');                    // 완료하면 마이크 경고도 내린다
+    try { clearSegTimers(); } catch { /* ignore */ }
+    releaseWakeLock();
+    try { stopTimer(); } catch { /* ignore */ }
+    try { stopRiskLoop(); } catch { /* ignore */ }
+    setLiveRisk(null);
+    try { stopCaption(); } catch { /* ignore */ }
     // 겹치는 중이면 둘 다 멈춰야 한다. 하나만 멈추면 나머지가 계속 녹음한다.
-    for (const r of [...liveRecordersRef.current]) { try { r.stop(); } catch { /* 이미 멈췄다 */ } }
+    const recorders = [...liveRecordersRef.current];
+    for (const r of recorders) { try { r.stop(); } catch { /* 이미 멈췄다 */ } }
+    // **완료가 화면에서 안 넘어가던 문제 (BEP 이식).** 살아있는 레코더가 없으면 즉시 idle,
+    // 있어도 onstop 이 끝내 안 뜨는 먹통 대비 안전 타임아웃으로 반드시 idle 로 넘긴다.
+    if (recorders.length === 0) { finalizeIdle(); return; }
+    setTimeout(() => { if (stoppingRef.current) finalizeIdle(); }, 4000);
   };
 
   const toggleSelect = (key: string) => {
@@ -848,6 +941,25 @@ export default function UploadPage() {
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {/* 마이크 끊김 경고 (BEP 이식). 통화·앱전환으로 마이크를 뺏기면 화면은 "녹음 중" 인데
+          소리는 안 들어온다 — 그걸 모르는 것이 가장 위험하다. 감지해서 크게 알린다. */}
+      {recordingActive && micStatus !== 'ok' && (
+        <Alert severity={micStatus === 'restored' ? 'info' : 'error'} sx={{ mb: 2 }}>
+          {micStatus === 'muted' && (
+            <><strong>녹음이 멈췄습니다 — 마이크가 끊겼습니다.</strong> 통화·다른 앱 전환 때문일 수 있어
+              <strong> 자동으로 일시정지</strong>했습니다. 지금까지 서버에 저장된 구간은 안전합니다.
+              마이크가 돌아오면 알려 드립니다.</>
+          )}
+          {micStatus === 'ended' && (
+            <><strong>마이크 연결이 끊겼습니다.</strong> 이 상태로는 이어서 녹음이 안 됩니다 —
+              <strong> ■ 완료</strong>를 눌러 지금까지 저장된 구간으로 마무리하세요(그건 안전합니다).</>
+          )}
+          {micStatus === 'restored' && (
+            <><strong>마이크가 돌아왔습니다.</strong> <strong>● 이어서</strong>를 눌러 계속 녹음하세요.</>
+          )}
+        </Alert>
+      )}
 
       {/* 녹음 중에 세션이 끊겼다. 화면을 옮기면 녹음이 사라지므로 알리기만 한다. */}
       {sessionLost && (

@@ -119,7 +119,9 @@ export async function listPending(): Promise<PendingSession[]> {
           chunks,
           mime: chunks[0]?.mime || 'audio/webm',
           started_at: chunks[0]?.created_at || 0,
-          bytes: chunks.reduce((n, c) => n + c.blob.size, 0),
+          // 조각 하나의 blob 이 깨져 있어도 여기서 터지면 목록 전체가 빈 배열로 떨어져
+          // "올라가지 못한 녹음 없음" 으로 거짓 표시된다. 옵셔널로 읽어 그 한 개만 0 으로 센다.
+          bytes: chunks.reduce((n, c) => n + (c.blob?.size || 0), 0),
         }
       })
       .sort((a, b) => b.started_at - a.started_at)
