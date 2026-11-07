@@ -69,3 +69,8 @@
   느림: auth 4151ms
   web: index-BQiBvtZo.js
   analysis: 24h 미팅 0 · 실패 0
+2026-11-07 09:51  DOWN  web=242ms api=83ms stream=FAIL auth=3378ms db=1243ms transcribe=ok analysis=ok
+  실패: stream(Failed to parse URL from /health)
+  느림: auth 3378ms
+  web: index-BQiBvtZo.js
+  analysis: 24h 미팅 0 · 실패 0
