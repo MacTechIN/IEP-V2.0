@@ -295,3 +295,8 @@
   web: index-BQiBvtZo.js
   analysis: 24h 미팅 0 · 실패 0
 점검 자체가 실패: Cannot read properties of undefined (reading 'stuck')
+2026-11-28 01:51  DOWN  web=426ms api=230ms stream=FAIL auth=3378ms db=1323ms transcribe=ok analysis=ok
+  실패: stream(Failed to parse URL from /health)
+  느림: auth 3378ms
+  web: index-BQiBvtZo.js
+  analysis: 24h 미팅 0 · 실패 0
